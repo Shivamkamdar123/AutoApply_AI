@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoApply AI — Agent Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">AA</span>
+    <span class="brand-name">AutoApply <span class="brand-accent">AI</span></span>
+  </div>
+  <div class="agent-status">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Agent idle</span>
+  </div>
+</header>
+
+<main class="console">
+
+  <section class="stats-row" aria-label="Summary statistics">
+    <div class="stat-card">
+      <span class="stat-label">Jobs matched</span>
+      <span class="stat-value" id="statMatched">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Recommended</span>
+      <span class="stat-value accent-amber" id="statRecommended">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Applied</span>
+      <span class="stat-value accent-green" id="statApplied">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Avg. match score</span>
+      <span class="stat-value" id="statAvgScore">—</span>
+    </div>
+  </section>
+
+  <section class="pipeline-section" aria-label="Application pipeline">
+    <h2 class="section-title">Pipeline</h2>
+    <div class="pipeline-track" id="pipelineTrack">
+      <div class="pipeline-stage" data-stage="parsed">
+        <span class="stage-node"></span>
+        <span class="stage-label">Parsed</span>
+        <span class="stage-count" id="count-parsed">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="matched">
+        <span class="stage-node"></span>
+        <span class="stage-label">Matched</span>
+        <span class="stage-count" id="count-matched">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="queued">
+        <span class="stage-node"></span>
+        <span class="stage-label">Queued</span>
+        <span class="stage-count" id="count-queued">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="applied">
+        <span class="stage-node"></span>
+        <span class="stage-label">Applied</span>
+        <span class="stage-count" id="count-applied">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="review">
+        <span class="stage-node"></span>
+        <span class="stage-label">Needs review</span>
+        <span class="stage-count" id="count-review">0</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="split-section">
+    <div class="panel applications-panel">
+      <h2 class="section-title">Matched applications</h2>
+      <table class="applications-table">
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Company</th>
+            <th>Score</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="applicationsBody">
+          <tr><td colspan="4" class="empty-row">Loading matches…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel log-panel">
+      <h2 class="section-title">Agent log</h2>
+      <div class="agent-log" id="agentLog"></div>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

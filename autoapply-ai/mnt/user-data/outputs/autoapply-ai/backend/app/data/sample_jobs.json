@@ -1,0 +1,47 @@
+[
+  {
+    "id": "job-001",
+    "title": "Backend Engineer",
+    "company": "Northwind Systems",
+    "location": "Bengaluru, IN (Hybrid)",
+    "description": "We're looking for a backend engineer comfortable with Python, FastAPI, and SQL databases. You'll build REST APIs, work with Docker for deployment, and collaborate with a small team using Git.",
+    "url": "https://example.com/jobs/job-001",
+    "source": "sample"
+  },
+  {
+    "id": "job-002",
+    "title": "Machine Learning Intern",
+    "company": "Lumen Analytics",
+    "location": "Remote",
+    "description": "Assist the ML team with data preprocessing using Pandas and NumPy, train models with scikit-learn and PyTorch, and help evaluate NLP pipelines.",
+    "url": "https://example.com/jobs/job-002",
+    "source": "sample"
+  },
+  {
+    "id": "job-003",
+    "title": "Frontend Developer",
+    "company": "Brightpath Labs",
+    "location": "Pune, IN",
+    "description": "Build responsive interfaces with React, TypeScript, and modern CSS. Experience with REST API integration and Git-based workflows required.",
+    "url": "https://example.com/jobs/job-003",
+    "source": "sample"
+  },
+  {
+    "id": "job-004",
+    "title": "QA / Automation Engineer",
+    "company": "Verity Cloud",
+    "location": "Remote",
+    "description": "Own our test automation using Selenium and Playwright. Familiarity with CI/CD pipelines, Docker, and Python scripting is a big plus.",
+    "url": "https://example.com/jobs/job-004",
+    "source": "sample"
+  },
+  {
+    "id": "job-005",
+    "title": "Data Engineer",
+    "company": "Northwind Systems",
+    "location": "Bengaluru, IN",
+    "description": "Design data pipelines using Python and SQL, manage infrastructure on AWS, and maintain PostgreSQL and MongoDB data stores.",
+    "url": "https://example.com/jobs/job-005",
+    "source": "sample"
+  }
+]
