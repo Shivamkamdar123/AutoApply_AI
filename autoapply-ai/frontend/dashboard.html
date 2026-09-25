@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Dashboard — AutoApply AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Global Notification Toast Container -->
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+<!-- Connection / Offline Alert Banner -->
+<div id="connectionBanner" class="connection-banner" style="display: none;">
+  <span class="banner-icon">⚠</span>
+  <span id="bannerMessage" class="banner-text">Connecting to AutoApply AI backend...</span>
+  <button id="btnRetryConnection" class="btn btn-sm btn-outline">Retry Connection</button>
+</div>
+
+<!-- Top Navigation Bar -->
+<header class="topbar">
+  <div class="brand">
+    <a href="dashboard.html" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
+      <span class="brand-mark">AA</span>
+      <span class="brand-name">AutoApply <span class="brand-accent">AI</span></span>
+    </a>
+    <span id="connectionBadge" class="badge-tag standalone">Initializing...</span>
+  </div>
+
+  <nav class="topbar-nav" style="display: flex; gap: 16px;">
+    <a href="dashboard.html" class="nav-link is-active">Dashboard</a>
+    <a href="profile.html" class="nav-link">Profile &amp; Settings</a>
+  </nav>
+
+  <div class="topbar-actions">
+    <div class="safety-badge" title="Hard default constraint: form submissions require manual review">
+      <span class="safety-icon">🛡️</span>
+      <span>DRY_RUN: ACTIVE</span>
+    </div>
+
+    <div class="agent-status" id="agentStatusBlock">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-label" id="statusText">Agent idle</span>
+      <button class="btn btn-sm btn-outline" id="btnToggleAgent">Start Agent</button>
+    </div>
+
+    <div class="user-nav-block" style="display: flex; align-items: center; gap: 10px; border-left: 1px solid var(--border); padding-left: 16px;">
+      <span id="navUserBadge" class="nav-user-badge" style="font-size: 13px; font-weight: 500; color: var(--text-primary);">Loading...</span>
+      <button id="btnLogout" class="btn btn-outline btn-xs" style="padding: 4px 10px; font-size: 12px;">Log Out</button>
+    </div>
+  </div>
+</header>
+
+<main class="dashboard-container">
+
+  <!-- Multi-Source Job Search & Filter Section -->
+  <section class="card search-filter-card" style="margin-bottom: 24px;">
+    <div class="card-header" style="padding-bottom: 12px;">
+      <div>
+        <h2 class="card-title">Live Job Board Aggregator &amp; Matcher</h2>
+        <p class="card-subtitle">Query real public ATS boards (Greenhouse, Lever, Remotive, RemoteOK) with deduplication &amp; polite rate limiting.</p>
+      </div>
+      <div id="sourcesStatusContainer" class="sources-status-pills" style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <!-- Filled dynamically with per-source health telemetry -->
+      </div>
+    </div>
+    <form id="jobSearchForm" class="search-form-grid" style="display: grid; grid-template-columns: 2fr 1.5fr auto; gap: 14px; align-items: end;">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label" for="searchKeywords">Keywords / Target Title</label>
+        <input type="text" id="searchKeywords" class="form-control" placeholder="e.g. Backend Engineer, Python, FastAPI, Distributed Systems">
+      </div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label" for="searchLocation">Location Preference</label>
+        <input type="text" id="searchLocation" class="form-control" placeholder="e.g. Remote, United States, Europe">
+      </div>
+      <button type="submit" class="btn btn-primary" id="btnSearchSubmit" style="height: 42px; white-space: nowrap;">
+        🔍 Search &amp; Match
+      </button>
+    </form>
+    <div class="source-checkboxes-row" style="margin-top: 14px; display: flex; align-items: center; gap: 20px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap;">
+      <span style="font-weight: 600; color: var(--text-primary);">Active Sources:</span>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="checkbox" id="srcGreenhouse" name="sources" value="greenhouse" checked> Greenhouse
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="checkbox" id="srcLever" name="sources" value="lever" checked> Lever
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="checkbox" id="srcRemotive" name="sources" value="remotive" checked> Remotive
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="checkbox" id="srcRemoteOK" name="sources" value="remoteok" checked> RemoteOK
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="checkbox" id="srcSample" name="sources" value="sample" checked> Sample Fixtures
+      </label>
+    </div>
+  </section>
+
+  <!-- Candidate Profile Summary Strip -->
+  <section class="card profile-strip" style="margin-bottom: 24px;">
+    <div class="profile-info-grid">
+      <div class="profile-avatar" id="profileAvatar">AA</div>
+      <div class="profile-details">
+        <div class="profile-header-line">
+          <h2 class="profile-name" id="profileName">Loading Profile...</h2>
+          <span class="profile-meta-tag" id="profileExp">-- yrs exp</span>
+          <span class="profile-meta-tag" id="profileLang">EN</span>
+          <span class="profile-meta-tag" id="profileRemotePref" style="display: none;">Remote</span>
+        </div>
+        <p class="profile-contact" id="profileContact">-- • --</p>
+        <div class="profile-skills-row" id="profileSkills">
+          <!-- Skill chips rendered dynamically -->
+        </div>
+      </div>
+      <div class="profile-actions-column">
+        <input type="file" id="resumeFileInput" accept=".pdf,.docx,.txt" style="display: none;">
+        <button class="btn btn-outline btn-sm" id="btnUploadResume">
+          📄 Upload New Resume
+        </button>
+        <a href="profile.html" class="btn btn-secondary btn-sm" style="text-decoration: none; text-align: center;">
+          ⚙️ Edit Full Profile →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Key Metrics Row -->
+  <section class="stats-row" style="margin-bottom: 24px;">
+    <div class="stat-card">
+      <span class="stat-label">Jobs Matched</span>
+      <span class="stat-val" id="statMatched">0</span>
+      <span class="stat-desc">Deduplicated across live sources</span>
+    </div>
+    <div class="stat-card highlight">
+      <span class="stat-label">Pending Human Review</span>
+      <span class="stat-val accent-amber" id="statRecommended">0</span>
+      <span class="stat-desc">Halted at AWAITING_REVIEW safety valve</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Verified (Dry Run)</span>
+      <span class="stat-val accent-green" id="statApplied">0</span>
+      <span class="stat-desc">Form mapped &amp; verified safely</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Avg Match Score</span>
+      <span class="stat-val" id="statAvgScore">0.00</span>
+      <span class="stat-desc">Cosine similarity across profile skills</span>
+    </div>
+  </section>
+
+  <!-- Autonomous Agent Pipeline Track -->
+  <section class="card pipeline-track-card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div>
+        <h3 class="card-title">Agent State Machine Pipeline</h3>
+        <p class="card-subtitle">Deterministic lifecycle guaranteeing zero unauthorized form submissions.</p>
+      </div>
+      <button class="btn btn-sm btn-primary" id="btnRunPipeline">
+        ▶ Trigger Match &amp; Review Cycle
+      </button>
+    </div>
+    <div class="pipeline-track">
+      <div class="pipeline-stage" data-stage="parsed">
+        <div class="stage-dot"></div>
+        <span class="stage-label">1. Resume Parsed</span>
+        <span class="stage-count" id="count-parsed">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="matched">
+        <div class="stage-dot"></div>
+        <span class="stage-label">2. Jobs Scraped &amp; Matched</span>
+        <span class="stage-count" id="count-matched">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage is-active" data-stage="review">
+        <div class="stage-dot"></div>
+        <span class="stage-label">3. Awaiting Human Review</span>
+        <span class="stage-count" id="count-review">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="applied">
+        <div class="stage-dot"></div>
+        <span class="stage-label">4. Verified (Dry Run)</span>
+        <span class="stage-count" id="count-applied">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="submitted">
+        <div class="stage-dot"></div>
+        <span class="stage-label">5. Live Submitted</span>
+        <span class="stage-count" id="count-submitted">0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Human-in-the-Loop Review Queue -->
+  <section class="card review-queue-card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h2 class="card-title">Human-in-the-Loop Review Queue</h2>
+          <span class="badge-tag" id="queuePendingCount">0 pending review</span>
+        </div>
+        <p class="card-subtitle">
+          Inspect field mappings, view browser form snapshots, generate tailored cover letters, and confirm before any application progresses.
+        </p>
+      </div>
+    </div>
+
+    <div id="reviewQueueList" class="review-queue-list">
+      <!-- Dynamic Review Cards Rendered Here -->
+      <div class="empty-state">
+        <span class="empty-state-icon">✨</span>
+        <strong>Review Queue Clear</strong>
+        <span>Running match cycle to evaluate candidate fit...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Matched Job Postings Grid/Table -->
+  <section class="card table-card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Scraped Postings &amp; Match Fit</h2>
+        <p class="card-subtitle">Real-time job postings ranked by TF-IDF &amp; skill overlap with your profile.</p>
+      </div>
+      <div class="table-search-wrap">
+        <input type="text" id="jobSearchInput" class="form-control form-control-sm" placeholder="Filter current list...">
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Job Title</th>
+            <th>Company</th>
+            <th>Match Score</th>
+            <th>Source Board</th>
+            <th>Fit Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="applicationsBody">
+          <tr>
+            <td colspan="6" class="empty-row">Loading matched postings...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Agent Execution Decision Log -->
+  <section class="card terminal-card" style="margin-bottom: 24px;">
+    <div class="card-header">
+      <div class="terminal-title-row">
+        <span class="terminal-dot dot-red"></span>
+        <span class="terminal-dot dot-yellow"></span>
+        <span class="terminal-dot dot-green"></span>
+        <h3 class="card-title" style="margin-left: 8px;">Autonomous Agent Decision &amp; Audit Log</h3>
+      </div>
+      <button class="btn btn-xs btn-outline" id="btnClearLog">Clear Log</button>
+    </div>
+    <div class="terminal-body" id="agentLog" style="max-height: 280px; overflow-y: auto;">
+      <!-- Streamed decision records -->
+    </div>
+  </section>
+
+</main>
+
+<!-- Modal: Screenshot Verification Viewer -->
+<div class="modal-backdrop" id="screenshotModal">
+  <div class="modal-dialog" style="max-width: 900px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="screenshotModalTitle">Form Verification Snapshot</h3>
+      <button class="modal-close-btn" id="btnCloseScreenshotModal">&times;</button>
+    </div>
+    <div class="modal-body" style="text-align: center; background: #080c13;">
+      <div id="screenshotLoading" style="padding: 40px; color: var(--text-muted);">
+        <span>Loading form snapshot...</span>
+      </div>
+      <img id="screenshotImg" src="" alt="Application Form Snapshot" style="max-width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--border); display: none;">
+    </div>
+    <div class="modal-footer">
+      <span style="font-size: 12px; color: var(--text-muted); margin-right: auto;">
+        🛡️ High-resolution capture taken during INSPECTING_FIELDS stage before review halt.
+      </span>
+      <button class="btn btn-secondary btn-sm" id="btnCloseScreenshotModal2">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Tailored Cover Letter Generator -->
+<div class="modal-backdrop" id="coverLetterModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title" id="coverLetterModalTitle">Tailored Application Note</h3>
+      <button class="modal-close-btn" id="btnCloseCoverModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="coverLetterLoading" style="display: none; text-align: center; padding: 24px; color: var(--accent-cyan);">
+        <span>Generating personalized application note from profile and job requirements...</span>
+      </div>
+      <div id="coverLetterContentWrap">
+        <textarea id="coverLetterText" class="form-control" rows="12" style="font-family: var(--font-mono); font-size: 13px; line-height: 1.6;" placeholder="Cover letter will appear here..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" id="btnCopyCoverLetter">📋 Copy to Clipboard</button>
+      <button class="btn btn-secondary btn-sm" id="btnCloseCoverModal2">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -2,17 +2,18 @@
 Pytest configuration & fixtures
 ================================
 Provides fixtures for resumes (PDF, DOCX, TXT, scanned, edge cases),
-job postings, profiles, and temporary test directories.
+job postings, profiles, authenticated test users, and temporary test databases.
 """
 
-import os
-import tempfile
 from pathlib import Path
 import docx
 import pytest
+from fastapi.testclient import TestClient
 
+from app.core.security import create_access_token, hash_password
 from app.db.storage import storage
-from app.models.schemas import JobPosting, ResumeProfile
+from app.main import app
+from app.models.schemas import JobPosting, ResumeProfile, UserResponse
 
 
 @pytest.fixture(autouse=True)
@@ -22,6 +23,59 @@ def isolate_test_db(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(storage, "db_path", test_db)
     storage._init_db()
     yield
+
+
+@pytest.fixture
+def client():
+    """TestClient instance for API integration testing."""
+    return TestClient(app)
+
+
+@pytest.fixture
+def test_user() -> UserResponse:
+    """Creates and returns an active test user in the isolated database."""
+    pwd_hash = hash_password("secret123")
+    user = storage.create_user(
+        email="jane.doe@example.com",
+        password_hash=pwd_hash,
+        full_name="Jane Doe",
+    )
+    # Seed default skills in profile for matching tests
+    storage.save_or_update_profile(
+        user.id,
+        {
+            "skills": ["python", "fastapi", "docker", "postgresql", "sql", "git", "rest api"],
+            "years_experience": 4.0,
+            "desired_role": "Backend Engineer",
+        },
+    )
+    return user
+
+
+@pytest.fixture
+def test_user_b() -> UserResponse:
+    """Creates a second user for multi-tenant isolation verification."""
+    pwd_hash = hash_password("password456")
+    user = storage.create_user(
+        email="bob.smith@example.com",
+        password_hash=pwd_hash,
+        full_name="Bob Smith",
+    )
+    return user
+
+
+@pytest.fixture
+def auth_headers(test_user: UserResponse) -> dict:
+    """Returns Bearer authorization header for test_user."""
+    token = create_access_token({"sub": test_user.id, "email": test_user.email})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth_headers_b(test_user_b: UserResponse) -> dict:
+    """Returns Bearer authorization header for test_user_b."""
+    token = create_access_token({"sub": test_user_b.id, "email": test_user_b.email})
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture

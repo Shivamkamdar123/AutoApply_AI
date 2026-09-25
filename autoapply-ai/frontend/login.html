@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In & Sign Up — AutoApply AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <a href="index.html" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
+      <span class="brand-mark">AA</span>
+      <span class="brand-name">AutoApply <span class="brand-accent">AI</span></span>
+    </a>
+  </div>
+  <div class="topbar-actions">
+    <a href="index.html" class="nav-link">← Back to Overview</a>
+  </div>
+</header>
+
+<main class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1 class="auth-title" id="authTitle">Welcome Back</h1>
+      <p class="auth-subtitle" id="authSubtitle">Sign in to your AutoApply AI agent dashboard</p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab-btn is-active" id="tabLogin" type="button">Log In</button>
+      <button class="auth-tab-btn" id="tabSignup" type="button">Create Account</button>
+    </div>
+
+    <!-- Alert banner -->
+    <div class="auth-alert" id="authAlert" role="alert"></div>
+
+    <!-- Login Form -->
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" class="form-control" placeholder="you@example.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="btnLoginSubmit" style="width: 100%;">
+        <span id="loginBtnText">Sign In</span>
+      </button>
+      <div class="auth-links">
+        <a class="auth-link" id="linkForgotPassword">Forgot password?</a>
+      </div>
+    </form>
+
+    <!-- Signup Form -->
+    <form id="signupForm" style="display: none;">
+      <div class="form-group">
+        <label class="form-label" for="signupName">Full Name</label>
+        <input type="text" id="signupName" class="form-control" placeholder="Alex Rivera" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="signupEmail">Email Address</label>
+        <input type="email" id="signupEmail" class="form-control" placeholder="you@example.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" class="form-control" placeholder="Min 6 characters" minlength="6" required autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="btnSignupSubmit" style="width: 100%;">
+        <span id="signupBtnText">Create Account</span>
+      </button>
+    </form>
+
+    <!-- Forgot & Reset Password Flow Box -->
+    <div id="forgotPasswordBox" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+      <h3 style="font-size: 16px; margin: 0 0 8px 0;">Reset Password</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 16px 0;">Enter your account email to receive a password reset token.</p>
+      
+      <div id="forgotStep1">
+        <div class="form-group">
+          <label class="form-label" for="forgotEmail">Email Address</label>
+          <input type="email" id="forgotEmail" class="form-control" placeholder="you@example.com">
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" id="btnSendForgotToken" style="width: 100%;">Request Reset Token</button>
+      </div>
+
+      <div id="forgotStep2" style="display: none; margin-top: 16px;">
+        <div class="form-group">
+          <label class="form-label" for="resetToken">Reset Token</label>
+          <input type="text" id="resetToken" class="form-control" placeholder="Paste token here">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="resetNewPassword">New Password</label>
+          <input type="password" id="resetNewPassword" class="form-control" placeholder="New password (min 6 chars)" minlength="6">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btnConfirmReset" style="width: 100%;">Confirm New Password</button>
+      </div>
+
+      <div style="text-align: center; margin-top: 12px;">
+        <a class="auth-link" id="linkBackToLogin">← Back to Log In</a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="app.js"></script>
+<script>
+  // Auth page controller logic
+  document.addEventListener("DOMContentLoaded", () => {
+    initAuthPage();
+  });
+</script>
+</body>
+</html>

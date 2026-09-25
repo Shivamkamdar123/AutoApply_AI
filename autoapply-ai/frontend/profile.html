@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile &amp; Settings — AutoApply AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Notification Toast Container -->
+<div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+<!-- Top Navigation Bar -->
+<header class="topbar">
+  <div class="brand">
+    <a href="dashboard.html" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
+      <span class="brand-mark">AA</span>
+      <span class="brand-name">AutoApply <span class="brand-accent">AI</span></span>
+    </a>
+  </div>
+
+  <nav class="topbar-nav" style="display: flex; gap: 16px;">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="profile.html" class="nav-link is-active">Profile &amp; Settings</a>
+  </nav>
+
+  <div class="topbar-actions">
+    <div class="user-nav-block" style="display: flex; align-items: center; gap: 10px;">
+      <span id="navUserBadge" class="nav-user-badge" style="font-size: 13px; font-weight: 500; color: var(--text-primary);">Loading...</span>
+      <button id="btnLogout" class="btn btn-outline btn-xs" style="padding: 4px 10px; font-size: 12px;">Log Out</button>
+    </div>
+  </div>
+</header>
+
+<main class="dashboard-container" style="max-width: 1000px; padding: 32px 20px;">
+
+  <div class="profile-header-strip" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
+    <div>
+      <h1 style="font-family: var(--font-display); font-size: 26px; font-weight: 700; margin: 0 0 6px 0;">Candidate Profile &amp; Preferences</h1>
+      <p style="color: var(--text-muted); font-size: 14px; margin: 0;">
+        All fields are optional and editable anytime. Changes update agent matching and form field mapping instantly.
+      </p>
+    </div>
+    <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-subtle);">
+      Last updated: <span id="profileLastUpdated">--</span>
+    </div>
+  </div>
+
+  <!-- Profile Form Card -->
+  <section class="card" style="margin-bottom: 32px;">
+    <form id="profileEditForm">
+      
+      <!-- Basic Details -->
+      <h3 class="card-title" style="margin-bottom: 16px; font-size: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+        1. Personal &amp; Contact Information
+      </h3>
+      
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="profFullName">Full Name</label>
+          <input type="text" id="profFullName" class="form-control" placeholder="Alex Rivera">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="profEmail">Contact Email (for job applications)</label>
+          <input type="email" id="profEmail" class="form-control" placeholder="alex.rivera@example.com">
+          <small style="color: var(--text-muted); font-size: 11px;">Can differ from your account login email.</small>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="profPhone">Phone Number</label>
+          <input type="tel" id="profPhone" class="form-control" placeholder="+1 (555) 789-0123">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="profLocation">Current Location</label>
+          <input type="text" id="profLocation" class="form-control" placeholder="e.g. San Francisco, CA / Bengaluru, IN">
+        </div>
+      </div>
+
+      <!-- Professional Links -->
+      <h3 class="card-title" style="margin: 24px 0 16px 0; font-size: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+        2. Professional Profiles &amp; Portfolios
+      </h3>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="profLinkedIn">LinkedIn Profile URL</label>
+          <input type="url" id="profLinkedIn" class="form-control" placeholder="https://linkedin.com/in/username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="profGitHub">GitHub Profile URL</label>
+          <input type="url" id="profGitHub" class="form-control" placeholder="https://github.com/username">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="profPortfolio">Personal Website / Portfolio URL</label>
+        <input type="url" id="profPortfolio" class="form-control" placeholder="https://yourportfolio.dev">
+      </div>
+
+      <!-- Career & Target Preferences -->
+      <h3 class="card-title" style="margin: 24px 0 16px 0; font-size: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+        3. Target Roles &amp; Matching Preferences
+      </h3>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="profDesiredRole">Target Job Title / Role</label>
+          <input type="text" id="profDesiredRole" class="form-control" placeholder="e.g. Senior Backend Engineer">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="profDesiredLocation">Target Work Location</label>
+          <input type="text" id="profDesiredLocation" class="form-control" placeholder="e.g. Remote / New York, NY">
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="profRemotePref">Remote Work Preference</label>
+          <select id="profRemotePref" class="form-control">
+            <option value="any">Any (Remote, Hybrid, or On-site)</option>
+            <option value="remote">Remote Only</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="onsite">On-site</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="profYearsExp">Total Years of Professional Experience</label>
+          <input type="number" id="profYearsExp" class="form-control" step="0.5" min="0" max="50" placeholder="e.g. 4.5">
+        </div>
+      </div>
+
+      <!-- Skills Tag Editor -->
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label">Core Skills &amp; Tech Stack (Used for Cosine Similarity Matching)</label>
+        <div class="skills-editor">
+          <div id="skillsTagsContainer" class="skills-tags-container">
+            <!-- Rendered skill badges with remove icons -->
+          </div>
+          <div class="skills-add-input-wrap">
+            <input type="text" id="inputNewSkill" class="form-control form-control-sm" placeholder="Type a skill (e.g. Docker, PyTorch, Kubernetes) and press Enter">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnAddSkill">Add Skill</button>
+          </div>
+        </div>
+        <small style="color: var(--text-muted); font-size: 11px;">
+          Tip: Add technical skills, frameworks, and methodologies relevant to your target jobs.
+        </small>
+      </div>
+
+      <!-- Bio / Summary -->
+      <div class="form-group" style="margin-top: 16px;">
+        <label class="form-label" for="profBio">Candidate Summary / Bio</label>
+        <textarea id="profBio" class="form-control" rows="4" placeholder="Brief summary of your background, technical passions, and key career achievements. Used for auto-generating tailored cover letters and application notes."></textarea>
+      </div>
+
+      <!-- Form Actions -->
+      <div style="display: flex; gap: 14px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+        <button type="submit" class="btn btn-primary" id="btnSaveProfile">
+          💾 Save Profile Changes
+        </button>
+        <button type="button" class="btn btn-outline" id="btnResetProfile">
+          Reset Form
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Resume Management & History Section -->
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Resume Document History</h2>
+        <p class="card-subtitle">
+          Upload and version your resume files. The active resume is referenced during form filling and field mapping.
+        </p>
+      </div>
+    </div>
+
+    <!-- Upload Box -->
+    <div style="background: var(--surface-raised); border: 2px dashed var(--border); border-radius: var(--radius); padding: 24px; text-align: center; margin-bottom: 24px;">
+      <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--text-primary);">
+        Select a PDF, DOCX, or TXT resume file to upload (Max 15MB)
+      </p>
+      <input type="file" id="profileResumeFileInput" accept=".pdf,.docx,.txt" style="display: none;">
+      <button type="button" class="btn btn-outline btn-sm" id="btnSelectResumeFile">
+        📁 Choose Resume File
+      </button>
+      <span id="selectedResumeFileName" style="margin-left: 12px; font-size: 13px; color: var(--accent-cyan); font-family: var(--font-mono);"></span>
+      <div style="margin-top: 14px;">
+        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); cursor: pointer;">
+          <input type="checkbox" id="checkPopulateSuggestions" checked>
+          Update profile skills and experience suggestions from this resume
+        </label>
+      </div>
+      <div style="margin-top: 14px;">
+        <button type="button" class="btn btn-primary btn-sm" id="btnUploadResumeFile" style="display: none;">
+          ⬆ Upload &amp; Parse Resume
+        </button>
+      </div>
+    </div>
+
+    <!-- Resumes List -->
+    <div class="table-responsive">
+      <table class="resumes-list-table">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Uploaded Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="resumesListBody">
+          <tr>
+            <td colspan="4" class="empty-row" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              No resumes uploaded yet.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+name: AutoApply AI CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Backend PyTest Suite & Automation Harness
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'autoapply-ai/backend/requirements.txt'
+
+      - name: Install dependencies
+        working-directory: autoapply-ai/backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright & Chromium Browsers
+        working-directory: autoapply-ai/backend
+        run: |
+          playwright install --with-deps chromium
+
+      - name: Run Test Suite
+        working-directory: autoapply-ai/backend
+        env:
+          ENV: development
+          JWT_SECRET: ci-test-jwt-secret-key-32-characters-minimum!
+          SECRET_KEY: ci-test-application-secret-key-minimum-32!
+          DRY_RUN: "true"
+          AUTO_SUBMIT_ENABLED: "false"
+        run: |
+          pytest -v --tb=short

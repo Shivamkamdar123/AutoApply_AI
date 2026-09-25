@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environments & Secrets
+.env
+.env.local
+
+# Databases & SQLite WAL
+*.db
+*.sqlite3
+*.db-wal
+*.db-shm
+
+# Dynamic runtime media & uploaded files
+backend/app/data/screenshots/*
+!backend/app/data/screenshots/.gitkeep
+backend/app/data/resumes/*
+!backend/app/data/resumes/.gitkeep
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

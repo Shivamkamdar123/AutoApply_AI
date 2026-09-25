@@ -6,7 +6,7 @@ Fails fast with clear descriptive messages if required values are invalid.
 """
 
 from pathlib import Path
-from typing import List, Literal
+from typing import List, Literal, Optional
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -60,9 +60,26 @@ class Settings(BaseSettings):
         min_length=16,
         description="Master encryption key for local credentials storage"
     )
+    JWT_SECRET: str = Field(
+        default="autoapply-dev-jwt-secret-key-do-not-use-in-production-32b!",
+        min_length=16,
+        description="Signing secret for JWT authentication tokens"
+    )
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Optional LLM integration (Anthropic Claude)
+    ANTHROPIC_API_KEY: Optional[str] = None
+
+    # Uploads & Limits
+    MAX_UPLOAD_SIZE_BYTES: int = 15 * 1024 * 1024  # 15 MB
+
+    # Storage paths
     DATABASE_PATH: Path = DATA_DIR / "autoapply.db"
     SCREENSHOTS_DIR: Path = DATA_DIR / "screenshots"
     FIXTURES_DIR: Path = DATA_DIR / "fixtures"
+    RESUMES_DIR: Path = DATA_DIR / "resumes"
 
     SAMPLE_JOBS_FILE: Path = DATA_DIR / "sample_jobs.json"
 
@@ -82,6 +99,14 @@ class Settings(BaseSettings):
             return [str(origin).strip() for origin in v]
         return ["http://localhost:5500", "http://127.0.0.1:5500"]
 
+    def model_post_init(self, __context: object) -> None:
+        """Enforce production security constraints and fail fast if dev secrets are used."""
+        if self.ENV == "production":
+            if "dev-secret" in self.SECRET_KEY or len(self.SECRET_KEY) < 32:
+                raise ValueError("In production, SECRET_KEY must be a secure, random string of at least 32 characters.")
+            if "dev-jwt" in self.JWT_SECRET or len(self.JWT_SECRET) < 32:
+                raise ValueError("In production, JWT_SECRET must be a secure, random string of at least 32 characters.")
+
 
 # Instantiate settings singleton at startup to fail-fast if validation fails
 settings = Settings()
@@ -90,8 +115,10 @@ settings = Settings()
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 settings.SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 settings.FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
+settings.RESUMES_DIR.mkdir(parents=True, exist_ok=True)
 
 # Backward-compatibility aliases for existing imports
 ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
 MATCH_THRESHOLD = settings.MATCH_THRESHOLD
 SAMPLE_JOBS_FILE = settings.SAMPLE_JOBS_FILE
+

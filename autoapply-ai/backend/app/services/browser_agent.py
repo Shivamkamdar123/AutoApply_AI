@@ -333,17 +333,25 @@ class BrowserAgent:
             except Exception as e:
                 log.warning("field_fill_failed", selector=d.selector, error=str(e))
 
-    async def capture_screenshot(self, page: Any, job_id: str, correlation_id: str = "sys") -> Path:
-        """State: CAPTURING_SCREENSHOT — Takes visual proof of the filled form."""
+    async def capture_screenshot(
+        self,
+        page: Any,
+        job_id: str,
+        correlation_id: str = "sys",
+        user_id: str = "legacy_user",
+    ) -> Path:
+        """State: CAPTURING_SCREENSHOT — Takes visual proof of the filled form namespaced per user."""
         self.current_state = AgentState.CAPTURING_SCREENSHOT
         log = get_logger("browser_agent", correlation_id=correlation_id)
         log.info("agent_state_transition", state=self.current_state.value)
 
+        user_dir = settings.SCREENSHOTS_DIR / user_id
+        user_dir.mkdir(parents=True, exist_ok=True)
         screenshot_filename = f"review_{job_id}_{int(datetime.now(timezone.utc).timestamp())}.png"
-        screenshot_path = settings.SCREENSHOTS_DIR / screenshot_filename
+        screenshot_path = user_dir / screenshot_filename
         try:
             await page.screenshot(path=str(screenshot_path), full_page=True)
-            log.info("screenshot_captured", path=str(screenshot_path))
+            log.info("screenshot_captured", path=str(screenshot_path), user_id=user_id)
         except Exception as e:
             log.warning("screenshot_capture_failed", error=str(e))
         return screenshot_path
@@ -387,18 +395,19 @@ class BrowserAgent:
         job: JobPosting,
         dry_run: Optional[bool] = None,
         correlation_id: str = "sys",
+        user_id: str = "legacy_user",
     ) -> ApplicationStatus:
         """
         Executes the end-to-end perception -> action -> review loop for one job.
         Safety Valve: Defaults to DRY RUN mode (halts at AWAITING_REVIEW with screenshot and mappings).
         """
         log = get_logger("browser_agent", correlation_id=correlation_id)
-        log.info("starting_application_loop", job_id=job.id, company=job.company, dry_run=dry_run)
+        log.info("starting_application_loop", job_id=job.id, company=job.company, dry_run=dry_run, user_id=user_id)
 
-        # 1. Idempotency Check
-        if storage.is_job_applied_or_submitted(job.id):
-            log.info("idempotency_skip", job_id=job.id, reason="Job already applied or submitted.")
-            existing = storage.get_application(job.id)
+        # 1. Idempotency Check (Scoped to user_id)
+        if storage.is_job_applied_or_submitted(job.id, user_id=user_id):
+            log.info("idempotency_skip", job_id=job.id, user_id=user_id, reason="Job already applied or submitted.")
+            existing = storage.get_application(job.id, user_id=user_id)
             if existing:
                 return existing
 
@@ -417,8 +426,10 @@ class BrowserAgent:
             # 5. FILLING_FORM
             await self.fill_form(page, mappings, correlation_id=correlation_id)
 
-            # 6. CAPTURING_SCREENSHOT
-            screenshot_path = await self.capture_screenshot(page, job.id, correlation_id=correlation_id)
+            # 6. CAPTURING_SCREENSHOT (Namespaced by user_id)
+            screenshot_path = await self.capture_screenshot(
+                page, job.id, correlation_id=correlation_id, user_id=user_id
+            )
 
             now = datetime.now(timezone.utc).isoformat()
 
@@ -432,6 +443,7 @@ class BrowserAgent:
 
                 app_status = ApplicationStatus(
                     job_id=job.id,
+                    user_id=user_id,
                     company=job.company,
                     title=job.title,
                     stage="needs_review",
@@ -442,7 +454,7 @@ class BrowserAgent:
                     field_mappings=mappings,
                     notes="Form filled in verified Dry Run mode. Awaiting human approval.",
                 )
-                storage.save_or_update_application(app_status, url=job.url, location=job.location)
+                storage.save_or_update_application(app_status, user_id=user_id, url=job.url, location=job.location)
                 return app_status
 
             # 8. SUBMITTING (Only if explicitly enabled)
@@ -452,6 +464,7 @@ class BrowserAgent:
             final_stage = "submitted" if confirmed else "applied"
             app_status = ApplicationStatus(
                 job_id=job.id,
+                user_id=user_id,
                 company=job.company,
                 title=job.title,
                 stage=final_stage,
@@ -462,7 +475,7 @@ class BrowserAgent:
                 field_mappings=mappings,
                 notes="Submitted live after user authorization.",
             )
-            storage.save_or_update_application(app_status, url=job.url, location=job.location)
+            storage.save_or_update_application(app_status, user_id=user_id, url=job.url, location=job.location)
             self.current_state = AgentState.COMPLETED
             return app_status
 
@@ -472,6 +485,7 @@ class BrowserAgent:
             now = datetime.now(timezone.utc).isoformat()
             failed_status = ApplicationStatus(
                 job_id=job.id,
+                user_id=user_id,
                 company=job.company,
                 title=job.title,
                 stage="failed",
@@ -480,5 +494,6 @@ class BrowserAgent:
                 dry_run=is_dry_run,
                 notes=f"Agent error: {str(e)}",
             )
-            storage.save_or_update_application(failed_status, url=job.url, location=job.location)
+            storage.save_or_update_application(failed_status, user_id=user_id, url=job.url, location=job.location)
             return failed_status
+

@@ -133,3 +133,36 @@ class MissingSecretKeyError(SecurityError):
 class StorageError(AutoApplyException):
     """Raised when database or file storage operations fail."""
     pass
+
+
+# -------------------------------------------------------------
+# Authentication & Authorization Exceptions
+# -------------------------------------------------------------
+class AuthenticationError(AutoApplyException):
+    """Base exception for user authentication failures."""
+    pass
+
+
+class InvalidCredentialsError(AuthenticationError):
+    """Raised when email or password is incorrect."""
+    pass
+
+
+class InvalidTokenError(AuthenticationError):
+    """Raised when a JWT access or refresh token is invalid or expired."""
+    pass
+
+
+class UserAlreadyExistsError(AuthenticationError):
+    """Raised when attempting to sign up with an existing email address."""
+    pass
+
+
+class UserNotFoundError(AuthenticationError):
+    """Raised when a requested user account does not exist."""
+    pass
+
+
+class UnauthorizedAccessError(AutoApplyException):
+    """Raised when a user attempts to access resources belonging to another user."""
+    pass

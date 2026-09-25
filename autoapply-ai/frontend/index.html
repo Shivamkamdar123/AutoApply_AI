@@ -3,178 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AutoApply AI — Autonomous Job Application Agent</title>
+<title>AutoApply AI — Autonomous Human-Supervised Job Application Agent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<!-- Top Navigation -->
 <header class="topbar">
   <div class="brand">
     <span class="brand-mark">AA</span>
     <span class="brand-name">AutoApply <span class="brand-accent">AI</span></span>
-    <span class="badge-tag" id="connectionBadge">Connecting…</span>
   </div>
-  <div class="topbar-actions">
-    <div class="safety-badge" title="Safety Valve: Applications require human verification before submission">
-      <span class="shield-icon">🛡️</span>
-      <span id="safetyText">Dry Run Mode: Active</span>
-    </div>
-    <div class="agent-status">
-      <span class="status-dot" id="statusDot"></span>
-      <span id="statusText">Agent idle</span>
-      <button class="btn btn-sm btn-outline" id="btnToggleAgent" type="button">Start Agent</button>
-    </div>
+  <nav class="topbar-nav" id="publicNav">
+    <a href="#how-it-works" class="nav-link">How It Works</a>
+    <a href="#safety-model" class="nav-link">Safety Model</a>
+    <a href="#features" class="nav-link">Features</a>
+  </nav>
+  <div class="topbar-actions" id="authNavButtons">
+    <a href="login.html?tab=login" class="btn btn-outline btn-sm">Log In</a>
+    <a href="login.html?tab=signup" class="btn btn-primary btn-sm">Get Started</a>
   </div>
 </header>
 
-<div class="connection-banner" id="connectionBanner" style="display: none;">
-  <span class="banner-msg" id="bannerMessage"></span>
-  <button class="btn btn-sm btn-secondary" id="btnRetryConnection" type="button">Retry Connection</button>
-</div>
+<!-- Hero Section -->
+<section class="landing-hero">
+  <div class="hero-pill">
+    <span>🛡️ HUMAN-IN-THE-LOOP SAFETY VALVE — ZERO SILENT SUBMISSIONS</span>
+  </div>
+  <h1 class="hero-title">
+    Autonomous Job Applications.<br>
+    <span class="brand-accent">Human-Supervised Precision.</span>
+  </h1>
+  <p class="hero-subtitle">
+    AutoApply AI pairs intelligent job board aggregation with a Playwright browser agent that maps, fills, and screenshots application forms. Every draft halts in your review queue with explainable confidence rationales before anything is ever submitted.
+  </p>
+  <div class="hero-cta-group">
+    <a href="login.html?tab=signup" class="btn btn-primary" id="heroGetStartedBtn">Get Started Free</a>
+    <a href="login.html?tab=login" class="btn btn-secondary">Sign In to Dashboard</a>
+  </div>
 
-<main class="console">
+  <!-- Terminal State Machine Showcase -->
+  <div class="hero-terminal" id="safety-model">
+    <div class="terminal-header">
+      <span class="terminal-dot dot-red"></span>
+      <span class="terminal-dot dot-yellow"></span>
+      <span class="terminal-dot dot-green"></span>
+      <span class="terminal-title">autoapply-agent --mode=supervised-dry-run --safety-valve=strict</span>
+    </div>
+    <div class="terminal-body">
+      <div class="term-line-step">[09:15:02] ▶ Pipeline cycle initiated for candidate profile: Alex Rivera (Backend Engineer)</div>
+      <div class="term-line-step">[09:15:03] ✔ Scraped real postings across Greenhouse, Lever, Remotive & RemoteOK with rate limiting</div>
+      <div class="term-line-step">[09:15:04] ✔ Matcher scored top role: "Senior Backend Engineer @ Northwind Systems" (88% match)</div>
+      <div class="term-line-step">[09:15:05] → STATE: LOCATING_FORM — Located application container #job-application-form</div>
+      <div class="term-line-step">[09:15:06] → STATE: INSPECTING_FIELDS — Identified 6 input fields (name, email, phone, linkedin, exp, cover)</div>
+      <div class="term-line-step">[09:15:07] → STATE: MAPPING_FIELDS — 6/6 fields mapped with 96% avg confidence & decision rationales</div>
+      <div class="term-line-step">[09:15:08] → STATE: FILLING_FORM — Emulated natural human keystrokes into form inputs</div>
+      <div class="term-line-success">[09:15:09] → STATE: CAPTURING_SCREENSHOT — Captured high-res verification snapshot: review_job-001.png</div>
+      <div class="term-line-halt">[09:15:10] 🛡️ STATE: AWAITING_REVIEW — [SAFETY VALVE HALTED: Dry Run active. Human approval required.]</div>
+      <div class="term-line-action">[09:15:11] ⏸ Form verified and staged in Review Queue. Awaiting user click to approve or reject.</div>
+    </div>
+  </div>
+</section>
 
-  <!-- Candidate Profile Bar with Upload -->
-  <section class="profile-strip" aria-label="Active candidate profile">
-    <div class="profile-info">
-      <div class="profile-avatar" id="profileAvatar">AR</div>
-      <div class="profile-details">
-        <div class="profile-name-row">
-          <h1 class="profile-name" id="profileName">Loading Profile…</h1>
-          <span class="profile-badge" id="profileExp">— yrs exp</span>
-          <span class="profile-badge profile-lang" id="profileLang">EN</span>
-        </div>
-        <div class="profile-contact" id="profileContact">Loading contact info…</div>
-        <div class="profile-skills" id="profileSkills"></div>
-      </div>
-    </div>
-    <div class="profile-upload-box">
-      <input type="file" id="resumeFileInput" accept=".pdf,.docx,.txt" style="display: none;">
-      <button class="btn btn-primary" id="btnUploadResume" type="button">
-        <span>📄 Upload Resume</span>
-      </button>
-      <span class="upload-hint">Supports text-based PDF, DOCX, TXT</span>
-    </div>
-  </section>
+<!-- Features Grid -->
+<section class="features-grid" id="features">
+  <div class="feature-card">
+    <div class="feature-icon">🛡️</div>
+    <h3 class="feature-title">Human-in-the-Loop Safety</h3>
+    <p class="feature-desc">
+      Dry run mode is the hard default for every account. The agent stops at AWAITING_REVIEW with visual screenshots and per-field confidence rationales. No silent submissions.
+    </p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🌐</div>
+    <h3 class="feature-title">Multi-Board Aggregation</h3>
+    <p class="feature-desc">
+      Direct adapters for Greenhouse, Lever, Remotive, and RemoteOK. Complies with robots.txt, respects crawl-delay limits, and deduplicates listings with SHA-256 fingerprints.
+    </p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">📄</div>
+    <h3 class="feature-title">Hardened Resume Parser</h3>
+    <p class="feature-desc">
+      Multi-column PDF and DOCX parsing with layout awareness, scanned image detection, non-English script filtering, and automatic skill & experience extraction.
+    </p>
+  </div>
+  <div class="feature-card">
+    <div class="feature-icon">🔒</div>
+    <h3 class="feature-title">Multi-Tenant Isolation</h3>
+    <p class="feature-desc">
+      Full user authentication with bcrypt password hashing and JWT access tokens. Resumes, profiles, screenshots, and review queues are strictly isolated per account.
+    </p>
+  </div>
+</section>
 
-  <!-- Summary Statistics -->
-  <section class="stats-row" aria-label="Summary statistics">
-    <div class="stat-card">
-      <span class="stat-label">Jobs Scored</span>
-      <span class="stat-value" id="statMatched">—</span>
+<!-- How It Works Section -->
+<section class="landing-hero" id="how-it-works" style="margin-top: 20px;">
+  <h2 class="hero-title" style="font-size: 36px;">How AutoApply AI Works</h2>
+  <div class="features-grid" style="margin-top: 30px;">
+    <div class="feature-card">
+      <div class="brand-mark" style="width: fit-content; margin-bottom: 12px;">STEP 1</div>
+      <h3 class="feature-title">Upload Resume & Set Goals</h3>
+      <p class="feature-desc">Upload your resume to automatically extract your skills, or customize your preferred roles, locations, and remote preferences anytime in your Profile.</p>
     </div>
-    <div class="stat-card">
-      <span class="stat-label">Review Queue</span>
-      <span class="stat-value accent-amber" id="statRecommended">—</span>
+    <div class="feature-card">
+      <div class="brand-mark" style="width: fit-content; margin-bottom: 12px;">STEP 2</div>
+      <h3 class="feature-title">Agent Sources & Fills Forms</h3>
+      <p class="feature-desc">The Playwright agent crawls targeted boards, matches high-relevance openings, maps form fields with explainable confidence, and takes proof screenshots.</p>
     </div>
-    <div class="stat-card">
-      <span class="stat-label">Verified / Applied</span>
-      <span class="stat-value accent-green" id="statApplied">—</span>
+    <div class="feature-card">
+      <div class="brand-mark" style="width: fit-content; margin-bottom: 12px;">STEP 3</div>
+      <h3 class="feature-title">Inspect & Approve</h3>
+      <p class="feature-desc">Review visual screenshots and field mapping rationales in your Human Review Queue. Approve to simulate (dry run) or auto-submit on a per-job basis.</p>
     </div>
-    <div class="stat-card">
-      <span class="stat-label">Avg. Match Score</span>
-      <span class="stat-value" id="statAvgScore">—</span>
-    </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Application Pipeline Track -->
-  <section class="pipeline-section" aria-label="Application pipeline">
-    <div class="section-header-flex">
-      <h2 class="section-title">Autonomous Application Pipeline</h2>
-      <button class="btn btn-sm btn-secondary" id="btnRunPipeline" type="button">▶ Run Pipeline Cycle</button>
+<!-- Footer -->
+<footer style="border-top: 1px solid var(--border); padding: 40px 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+  <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+    <div class="brand">
+      <span class="brand-mark">AA</span>
+      <span class="brand-name">AutoApply <span class="brand-accent">AI</span></span>
     </div>
-    <div class="pipeline-track" id="pipelineTrack">
-      <div class="pipeline-stage is-active" data-stage="parsed">
-        <span class="stage-node"></span>
-        <span class="stage-label">Resume Parsed</span>
-        <span class="stage-count" id="count-parsed">0</span>
-      </div>
-      <div class="pipeline-connector"></div>
-      <div class="pipeline-stage" data-stage="matched">
-        <span class="stage-node"></span>
-        <span class="stage-label">Jobs Matched</span>
-        <span class="stage-count" id="count-matched">0</span>
-      </div>
-      <div class="pipeline-connector"></div>
-      <div class="pipeline-stage" data-stage="review">
-        <span class="stage-node"></span>
-        <span class="stage-label">Needs Review</span>
-        <span class="stage-count" id="count-review">0</span>
-      </div>
-      <div class="pipeline-connector"></div>
-      <div class="pipeline-stage" data-stage="applied">
-        <span class="stage-node"></span>
-        <span class="stage-label">Verified (Dry Run)</span>
-        <span class="stage-count" id="count-applied">0</span>
-      </div>
-      <div class="pipeline-connector"></div>
-      <div class="pipeline-stage" data-stage="submitted">
-        <span class="stage-node"></span>
-        <span class="stage-label">Submitted</span>
-        <span class="stage-count" id="count-submitted">0</span>
-      </div>
+    <div>
+      <a href="https://github.com/Shivamkamdar123/AutoApply_AI" target="_blank" style="color: var(--accent-cyan); text-decoration: none; margin-right: 20px;">GitHub Repository</a>
+      <a href="login.html?tab=signup" style="color: var(--text-primary); text-decoration: none;">Get Started</a>
     </div>
-  </section>
-
-  <!-- Review Queue (Human-in-the-Loop Section) -->
-  <section class="panel review-queue-panel" aria-label="Review queue">
-    <div class="section-header-flex">
-      <div>
-        <h2 class="section-title">Human-in-the-Loop Review Queue</h2>
-        <p class="section-subtitle">The agent has matched and prepared drafted applications. Approve to simulate (dry run) or auto-submit.</p>
-      </div>
-      <span class="queue-counter" id="queuePendingCount">0 pending review</span>
-    </div>
-    <div class="review-queue-list" id="reviewQueueList">
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <span>Loading review queue…</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- Split View: Matched Applications & Live Agent Log -->
-  <section class="split-section">
-    <div class="panel applications-panel">
-      <div class="section-header-flex">
-        <h2 class="section-title">Matched Job Postings</h2>
-        <div class="search-box">
-          <input type="text" id="jobSearchInput" placeholder="Filter by keyword or title…" aria-label="Filter jobs">
-        </div>
-      </div>
-      <div class="table-container">
-        <table class="applications-table">
-          <thead>
-            <tr>
-              <th>Role</th>
-              <th>Company</th>
-              <th>Score</th>
-              <th>Source</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="applicationsBody">
-            <tr><td colspan="5" class="empty-row"><div class="spinner"></div> Loading matches…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="panel log-panel">
-      <div class="section-header-flex">
-        <h2 class="section-title">Agent Decision Log</h2>
-        <button class="btn btn-sm btn-ghost" id="btnClearLog" type="button">Clear</button>
-      </div>
-      <div class="agent-log" id="agentLog" role="log" aria-live="polite"></div>
-    </div>
-  </section>
-
-</main>
-
-<div class="toast-container" id="toastContainer" aria-live="assertive"></div>
+  </div>
+</footer>
 
 <script src="app.js"></script>
+<script>
+  // Landing page initialization: if token present, show "Go to Dashboard" button
+  document.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem("autoapply_access_token");
+    if (token) {
+      const authBox = document.getElementById("authNavButtons");
+      if (authBox) {
+        authBox.innerHTML = `
+          <a href="dashboard.html" class="btn btn-primary btn-sm">Go to Dashboard →</a>
+        `;
+      }
+      const heroBtn = document.getElementById("heroGetStartedBtn");
+      if (heroBtn) {
+        heroBtn.textContent = "Open Dashboard →";
+        heroBtn.href = "dashboard.html";
+      }
+    }
+  });
+</script>
 </body>
 </html>
