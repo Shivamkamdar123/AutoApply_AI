@@ -1,0 +1,31 @@
+# Virtual environments
+venv/
+**/venv/
+.venv/
+
+# Python caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest / coverage
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases & screenshots
+*.db
+*.db-wal
+*.db-shm
+**/data/*.db
+**/data/*.db-wal
+**/data/*.db-shm
+**/data/screenshots/*.png
+!**/data/screenshots/.gitkeep
+
+# Environment secrets
+.env
+**/.env
+.env.local
