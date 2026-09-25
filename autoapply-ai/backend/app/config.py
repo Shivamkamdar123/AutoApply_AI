@@ -33,12 +33,18 @@ class Settings(BaseSettings):
     LOG_JSON: bool = False
 
     # CORS origins
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
+    # NOTE: kept as a plain string field (not List[str]) on purpose.
+    # Newer pydantic-settings versions try to JSON-decode any list-typed
+    # field read from the environment/.env BEFORE any field_validator runs,
+    # which breaks a simple comma-separated value like:
+    #   ALLOWED_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
+    # Reading it as a string and exposing the parsed list via a property
+    # avoids that entirely and keeps .env.example's format working forever.
+    ALLOWED_ORIGINS_RAW: str = Field(
+        default="http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000",
+        alias="ALLOWED_ORIGINS",
+        description="Comma-separated list of frontend origins allowed to call this API.",
+    )
 
     # Matching Threshold & Algorithm Configuration
     MATCH_THRESHOLD: float = Field(default=0.35, ge=0.0, le=1.0)
@@ -83,21 +89,19 @@ class Settings(BaseSettings):
 
     SAMPLE_JOBS_FILE: Path = DATA_DIR / "sample_jobs.json"
 
+    @property
+    def ALLOWED_ORIGINS(self) -> List[str]:
+        """Parsed, trimmed list of allowed CORS origins from ALLOWED_ORIGINS_RAW."""
+        if not self.ALLOWED_ORIGINS_RAW:
+            return ["http://localhost:5500", "http://127.0.0.1:5500"]
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS_RAW.split(",") if origin.strip()]
+
     @field_validator("MATCH_THRESHOLD")
     @classmethod
     def validate_threshold(cls, v: float) -> float:
         if not (0.0 <= v <= 1.0):
             raise ValueError(f"MATCH_THRESHOLD must be between 0.0 and 1.0, got {v}")
         return v
-
-    @field_validator("ALLOWED_ORIGINS", mode="before")
-    @classmethod
-    def parse_allowed_origins(cls, v: object) -> List[str]:
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        if isinstance(v, list):
-            return [str(origin).strip() for origin in v]
-        return ["http://localhost:5500", "http://127.0.0.1:5500"]
 
     def model_post_init(self, __context: object) -> None:
         """Enforce production security constraints and fail fast if dev secrets are used."""
@@ -121,4 +125,3 @@ settings.RESUMES_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_ORIGINS = settings.ALLOWED_ORIGINS
 MATCH_THRESHOLD = settings.MATCH_THRESHOLD
 SAMPLE_JOBS_FILE = settings.SAMPLE_JOBS_FILE
-
