@@ -1,60 +1,134 @@
 """
-Job scraper
-===========
-STATUS: STUB. Returns sample data so the rest of the system (matcher,
-dashboard) has something real to work with while this piece is built.
-
-Why this is stubbed rather than "fake-implemented": scraping real job
-boards means dealing with per-site HTML structure, login walls, rate
-limiting, and terms-of-service constraints — none of which can be built
-or verified without running against the live site. That work belongs in
-its own iteration cycle, not guessed at here.
-
-Planned real implementation:
-    Each job site gets its own class implementing the same `fetch_jobs`
-    interface (e.g. `LinkedInScraper`, `NaukriScraper`), using Playwright
-    to load search results and extract postings. `get_jobs()` below would
-    pick which scraper(s) to run based on user preferences.
-
-    class LinkedInScraper(JobScraper):
-        def fetch_jobs(self, query, location, limit=20):
-            # Playwright: open search URL, wait for results, parse cards
-            ...
+Job Scraper Service (Orchestrator)
+==================================
+Coordinates multiple site-specific adapters behind the unified JobScraperAdapter interface.
+Handles deduplication across sources, polite crawl delays, caching of raw vs normalized
+postings, and graceful degradation if an external board is unreachable.
 """
 
-import json
+import time
+from typing import List, Optional
 
-from app.config import SAMPLE_JOBS_FILE
+from app.core.logging import get_logger
+from app.db.storage import storage
 from app.models.schemas import JobPosting
+from app.services.scrapers.base import JobScraperAdapter
+from app.services.scrapers.greenhouse import GreenhouseJobAdapter
+from app.services.scrapers.lever import LeverJobAdapter
+from app.services.scrapers.remotefeed import RemoteFeedJobAdapter
+from app.services.scrapers.sample import SampleJobAdapter
+
+logger = get_logger("job_scraper_service")
 
 
-class JobScraper:
-    """Base interface every real site-specific scraper should implement."""
-
-    def fetch_jobs(self, query: str, location: str, limit: int = 20) -> list[JobPosting]:
-        raise NotImplementedError
-
-
-class SampleJobScraper(JobScraper):
-    """Reads from the bundled sample_jobs.json — used until real scrapers exist."""
-
-    def fetch_jobs(self, query: str = "", location: str = "", limit: int = 20) -> list[JobPosting]:
-        with open(SAMPLE_JOBS_FILE, "r", encoding="utf-8") as f:
-            raw_jobs = json.load(f)
-        jobs = [JobPosting(**job) for job in raw_jobs]
-
-        if query:
-            query_lower = query.lower()
-            jobs = [j for j in jobs if query_lower in j.title.lower() or query_lower in j.description.lower()]
-
-        return jobs[:limit]
-
-
-def get_jobs(query: str = "", location: str = "", limit: int = 20) -> list[JobPosting]:
+class JobScraperService:
     """
-    Entry point the rest of the app calls. Currently always uses the sample
-    scraper — swap this to select a real scraper once one exists, without
-    touching any calling code.
+    Orchestrates real scraping across registered job board adapters.
+    Deduplicates listings across sources and stores raw payloads separately.
     """
-    scraper = SampleJobScraper()
-    return scraper.fetch_jobs(query=query, location=location, limit=limit)
+
+    def __init__(self):
+        self._adapters: dict[str, JobScraperAdapter] = {
+            "greenhouse": GreenhouseJobAdapter(),
+            "lever": LeverJobAdapter(),
+            "remotive": RemoteFeedJobAdapter(),
+            "sample": SampleJobAdapter(),
+        }
+        self._cache: dict[str, tuple[float, List[JobPosting]]] = {}
+        self._cache_ttl_seconds: float = 60.0
+
+    def register_adapter(self, name: str, adapter: JobScraperAdapter) -> None:
+        """Register a new job site adapter without modifying core pipeline logic."""
+        self._adapters[name] = adapter
+        logger.info("scraper_adapter_registered", name=name)
+
+    def fetch_jobs_from_all(
+        self,
+        query: str = "",
+        location: str = "",
+        limit: int = 25,
+        sources: Optional[List[str]] = None,
+        correlation_id: Optional[str] = None,
+    ) -> List[JobPosting]:
+        """
+        Gathers jobs from selected or all active adapters.
+        Deduplicates listings across boards using content fingerprints.
+        """
+        cache_key = f"{query.lower().strip()}:{location.lower().strip()}:{limit}:{','.join(sorted(sources or []))}"
+        now = time.time()
+        if cache_key in self._cache:
+            cached_time, cached_data = self._cache[cache_key]
+            if now - cached_time < self._cache_ttl_seconds:
+                return cached_data[:limit]
+
+        log = get_logger("job_scraper_service", correlation_id=correlation_id)
+        selected_sources = sources or ["sample", "greenhouse", "lever", "remotive"]
+        
+        all_postings: List[JobPosting] = []
+        seen_hashes: set[str] = set()
+
+        for src_name in selected_sources:
+            adapter = self._adapters.get(src_name)
+            if not adapter:
+                continue
+
+            try:
+                postings = adapter.fetch_jobs(
+                    query=query,
+                    location=location,
+                    limit=limit,
+                    correlation_id=correlation_id,
+                )
+                for p in postings:
+                    # Deduplicate across sources
+                    if p.raw_hash and p.raw_hash in seen_hashes:
+                        continue
+                    if p.raw_hash:
+                        seen_hashes.add(p.raw_hash)
+                    all_postings.append(p)
+                    if len(all_postings) >= limit:
+                        break
+            except Exception as e:
+                log.warning("adapter_execution_failed", source=src_name, error=str(e))
+                continue
+
+            if len(all_postings) >= limit:
+                break
+
+        # Fallback to sample adapter if no live jobs could be collected (e.g. offline environment)
+        if not all_postings:
+            log.info("falling_back_to_sample_jobs")
+            all_postings = self._adapters["sample"].fetch_jobs(
+                query=query,
+                location=location,
+                limit=limit,
+                correlation_id=correlation_id,
+            )
+
+        log.info("job_collection_complete", total_postings=len(all_postings))
+        self._cache[cache_key] = (now, all_postings)
+        return all_postings[:limit]
+
+
+# Global scraper service singleton
+scraper_service = JobScraperService()
+
+
+def get_jobs(
+    query: str = "",
+    location: str = "",
+    limit: int = 25,
+    sources: Optional[List[str]] = None,
+    correlation_id: Optional[str] = None,
+) -> List[JobPosting]:
+    """
+    Main entry point for job sourcing across the system.
+    Pulls from real adapters with automatic deduplication and caching.
+    """
+    return scraper_service.fetch_jobs_from_all(
+        query=query,
+        location=location,
+        limit=limit,
+        sources=sources,
+        correlation_id=correlation_id,
+    )

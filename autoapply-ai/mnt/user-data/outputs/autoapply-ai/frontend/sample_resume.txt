@@ -1,0 +1,12 @@
+Alex Rivera
+alex.rivera@example.com | +1 (555) 789-0123 | Bengaluru, India
+Senior Backend Engineer with 5 years experience building scalable systems.
+
+TECHNICAL SKILLS:
+Languages & Frameworks: Python, FastAPI, Django, PostgreSQL, SQL, Docker, Kubernetes, Git, REST APIs, Redis
+
+EXPERIENCE:
+Staff Backend Developer — CyberDynamics (2021 - Present)
+- Engineered high-throughput microservices using FastAPI and async Python.
+- Designed database schemas and optimized complex SQL queries on PostgreSQL.
+- Automated containerized deployments using Docker and Kubernetes clusters.

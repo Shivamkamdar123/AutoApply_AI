@@ -1,0 +1,13 @@
+{
+  "name": "autoapply-ai-frontend",
+  "version": "1.0.0",
+  "description": "Frontend dashboard for AutoApply AI agent",
+  "scripts": {
+    "start": "python server.py",
+    "start:py": "python -m http.server 5500 --bind 127.0.0.1",
+    "dev:npx": "npx -y serve -l 5500 ."
+  },
+  "keywords": ["autoapply", "agent", "dashboard"],
+  "author": "AutoApply AI Team",
+  "license": "MIT"
+}

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Careers - Senior Python Engineer Application</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; font-weight: bold; }
+    input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px 20px; background: #2DD4C8; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    .success-msg { display: none; color: green; font-size: 18px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Apply for Senior Python Backend Engineer</h1>
+  <form id="job-application-form" action="#" method="POST" onsubmit="event.preventDefault(); document.getElementById('success').style.display='block';">
+    <div class="form-group">
+      <label for="applicant_name">Full Name *</label>
+      <input type="text" id="applicant_name" name="name" required placeholder="e.g. Jane Doe">
+    </div>
+
+    <div class="form-group">
+      <label for="applicant_email">Email Address *</label>
+      <input type="email" id="applicant_email" name="email" required placeholder="you@example.com">
+    </div>
+
+    <div class="form-group">
+      <label for="applicant_phone">Phone Number *</label>
+      <input type="tel" id="applicant_phone" name="phone" required placeholder="+1 555-0199">
+    </div>
+
+    <div class="form-group">
+      <label for="applicant_experience">Years of Experience</label>
+      <input type="number" id="applicant_experience" name="years_experience" step="0.5" min="0">
+    </div>
+
+    <div class="form-group">
+      <label for="applicant_linkedin">LinkedIn Profile URL</label>
+      <input type="url" id="applicant_linkedin" name="linkedin" placeholder="https://linkedin.com/in/...">
+    </div>
+
+    <div class="form-group">
+      <label for="applicant_cover_letter">Cover Letter / Note to Hiring Manager</label>
+      <textarea id="applicant_cover_letter" name="cover_letter" rows="4"></textarea>
+    </div>
+
+    <button type="submit" id="submit-application-btn">Submit Application</button>
+  </form>
+
+  <div id="success" class="success-msg">
+    Thank you! Your application has been submitted successfully.
+  </div>
+</body>
+</html>

@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AutoApply AI — Agent Console</title>
+<title>AutoApply AI — Autonomous Job Application Agent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,94 +14,166 @@
   <div class="brand">
     <span class="brand-mark">AA</span>
     <span class="brand-name">AutoApply <span class="brand-accent">AI</span></span>
+    <span class="badge-tag" id="connectionBadge">Connecting…</span>
   </div>
-  <div class="agent-status">
-    <span class="status-dot" id="statusDot"></span>
-    <span id="statusText">Agent idle</span>
+  <div class="topbar-actions">
+    <div class="safety-badge" title="Safety Valve: Applications require human verification before submission">
+      <span class="shield-icon">🛡️</span>
+      <span id="safetyText">Dry Run Mode: Active</span>
+    </div>
+    <div class="agent-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Agent idle</span>
+      <button class="btn btn-sm btn-outline" id="btnToggleAgent" type="button">Start Agent</button>
+    </div>
   </div>
 </header>
 
+<div class="connection-banner" id="connectionBanner" style="display: none;">
+  <span class="banner-msg" id="bannerMessage"></span>
+  <button class="btn btn-sm btn-secondary" id="btnRetryConnection" type="button">Retry Connection</button>
+</div>
+
 <main class="console">
 
+  <!-- Candidate Profile Bar with Upload -->
+  <section class="profile-strip" aria-label="Active candidate profile">
+    <div class="profile-info">
+      <div class="profile-avatar" id="profileAvatar">AR</div>
+      <div class="profile-details">
+        <div class="profile-name-row">
+          <h1 class="profile-name" id="profileName">Loading Profile…</h1>
+          <span class="profile-badge" id="profileExp">— yrs exp</span>
+          <span class="profile-badge profile-lang" id="profileLang">EN</span>
+        </div>
+        <div class="profile-contact" id="profileContact">Loading contact info…</div>
+        <div class="profile-skills" id="profileSkills"></div>
+      </div>
+    </div>
+    <div class="profile-upload-box">
+      <input type="file" id="resumeFileInput" accept=".pdf,.docx,.txt" style="display: none;">
+      <button class="btn btn-primary" id="btnUploadResume" type="button">
+        <span>📄 Upload Resume</span>
+      </button>
+      <span class="upload-hint">Supports text-based PDF, DOCX, TXT</span>
+    </div>
+  </section>
+
+  <!-- Summary Statistics -->
   <section class="stats-row" aria-label="Summary statistics">
     <div class="stat-card">
-      <span class="stat-label">Jobs matched</span>
+      <span class="stat-label">Jobs Scored</span>
       <span class="stat-value" id="statMatched">—</span>
     </div>
     <div class="stat-card">
-      <span class="stat-label">Recommended</span>
+      <span class="stat-label">Review Queue</span>
       <span class="stat-value accent-amber" id="statRecommended">—</span>
     </div>
     <div class="stat-card">
-      <span class="stat-label">Applied</span>
+      <span class="stat-label">Verified / Applied</span>
       <span class="stat-value accent-green" id="statApplied">—</span>
     </div>
     <div class="stat-card">
-      <span class="stat-label">Avg. match score</span>
+      <span class="stat-label">Avg. Match Score</span>
       <span class="stat-value" id="statAvgScore">—</span>
     </div>
   </section>
 
+  <!-- Application Pipeline Track -->
   <section class="pipeline-section" aria-label="Application pipeline">
-    <h2 class="section-title">Pipeline</h2>
+    <div class="section-header-flex">
+      <h2 class="section-title">Autonomous Application Pipeline</h2>
+      <button class="btn btn-sm btn-secondary" id="btnRunPipeline" type="button">▶ Run Pipeline Cycle</button>
+    </div>
     <div class="pipeline-track" id="pipelineTrack">
-      <div class="pipeline-stage" data-stage="parsed">
+      <div class="pipeline-stage is-active" data-stage="parsed">
         <span class="stage-node"></span>
-        <span class="stage-label">Parsed</span>
+        <span class="stage-label">Resume Parsed</span>
         <span class="stage-count" id="count-parsed">0</span>
       </div>
       <div class="pipeline-connector"></div>
       <div class="pipeline-stage" data-stage="matched">
         <span class="stage-node"></span>
-        <span class="stage-label">Matched</span>
+        <span class="stage-label">Jobs Matched</span>
         <span class="stage-count" id="count-matched">0</span>
-      </div>
-      <div class="pipeline-connector"></div>
-      <div class="pipeline-stage" data-stage="queued">
-        <span class="stage-node"></span>
-        <span class="stage-label">Queued</span>
-        <span class="stage-count" id="count-queued">0</span>
-      </div>
-      <div class="pipeline-connector"></div>
-      <div class="pipeline-stage" data-stage="applied">
-        <span class="stage-node"></span>
-        <span class="stage-label">Applied</span>
-        <span class="stage-count" id="count-applied">0</span>
       </div>
       <div class="pipeline-connector"></div>
       <div class="pipeline-stage" data-stage="review">
         <span class="stage-node"></span>
-        <span class="stage-label">Needs review</span>
+        <span class="stage-label">Needs Review</span>
         <span class="stage-count" id="count-review">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="applied">
+        <span class="stage-node"></span>
+        <span class="stage-label">Verified (Dry Run)</span>
+        <span class="stage-count" id="count-applied">0</span>
+      </div>
+      <div class="pipeline-connector"></div>
+      <div class="pipeline-stage" data-stage="submitted">
+        <span class="stage-node"></span>
+        <span class="stage-label">Submitted</span>
+        <span class="stage-count" id="count-submitted">0</span>
       </div>
     </div>
   </section>
 
+  <!-- Review Queue (Human-in-the-Loop Section) -->
+  <section class="panel review-queue-panel" aria-label="Review queue">
+    <div class="section-header-flex">
+      <div>
+        <h2 class="section-title">Human-in-the-Loop Review Queue</h2>
+        <p class="section-subtitle">The agent has matched and prepared drafted applications. Approve to simulate (dry run) or auto-submit.</p>
+      </div>
+      <span class="queue-counter" id="queuePendingCount">0 pending review</span>
+    </div>
+    <div class="review-queue-list" id="reviewQueueList">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading review queue…</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Split View: Matched Applications & Live Agent Log -->
   <section class="split-section">
     <div class="panel applications-panel">
-      <h2 class="section-title">Matched applications</h2>
-      <table class="applications-table">
-        <thead>
-          <tr>
-            <th>Role</th>
-            <th>Company</th>
-            <th>Score</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="applicationsBody">
-          <tr><td colspan="4" class="empty-row">Loading matches…</td></tr>
-        </tbody>
-      </table>
+      <div class="section-header-flex">
+        <h2 class="section-title">Matched Job Postings</h2>
+        <div class="search-box">
+          <input type="text" id="jobSearchInput" placeholder="Filter by keyword or title…" aria-label="Filter jobs">
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="applications-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Company</th>
+              <th>Score</th>
+              <th>Source</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="applicationsBody">
+            <tr><td colspan="5" class="empty-row"><div class="spinner"></div> Loading matches…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="panel log-panel">
-      <h2 class="section-title">Agent log</h2>
-      <div class="agent-log" id="agentLog"></div>
+      <div class="section-header-flex">
+        <h2 class="section-title">Agent Decision Log</h2>
+        <button class="btn btn-sm btn-ghost" id="btnClearLog" type="button">Clear</button>
+      </div>
+      <div class="agent-log" id="agentLog" role="log" aria-live="polite"></div>
     </div>
   </section>
 
 </main>
+
+<div class="toast-container" id="toastContainer" aria-live="assertive"></div>
 
 <script src="app.js"></script>
 </body>
