@@ -7,7 +7,7 @@ Fails fast with clear descriptive messages if required values are invalid.
 
 from pathlib import Path
 from typing import List, Literal, Optional
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -95,13 +95,6 @@ class Settings(BaseSettings):
         if not self.ALLOWED_ORIGINS_RAW:
             return ["http://localhost:5500", "http://127.0.0.1:5500"]
         return [origin.strip() for origin in self.ALLOWED_ORIGINS_RAW.split(",") if origin.strip()]
-
-    @field_validator("MATCH_THRESHOLD")
-    @classmethod
-    def validate_threshold(cls, v: float) -> float:
-        if not (0.0 <= v <= 1.0):
-            raise ValueError(f"MATCH_THRESHOLD must be between 0.0 and 1.0, got {v}")
-        return v
 
     def model_post_init(self, __context: object) -> None:
         """Enforce production security constraints and fail fast if dev secrets are used."""
