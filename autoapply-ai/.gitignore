@@ -35,3 +35,16 @@ backend/app/data/resumes/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Node & Next.js
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+build/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

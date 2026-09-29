@@ -9,13 +9,13 @@ start "AutoApply AI - Backend" cmd /k "cd /d %~dp0backend && run_backend.bat"
 
 timeout /t 2 /nobreak >nul
 
-echo 2. Launching Frontend (Static server on http://127.0.0.1:5500)...
+echo 2. Launching Next.js Frontend (on http://127.0.0.1:3000)...
 start "AutoApply AI - Frontend" cmd /k "cd /d %~dp0frontend && run_frontend.bat"
 
 timeout /t 2 /nobreak >nul
 
 echo 3. Opening AutoApply AI in your default web browser...
-start http://127.0.0.1:5500/
+start http://127.0.0.1:3000/
 
-echo Done! AutoApply AI is running.
-pause
+echo Done! AutoApply AI is running in the background.
+exit /b 0

@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # Reading it as a string and exposing the parsed list via a property
     # avoids that entirely and keeps .env.example's format working forever.
     ALLOWED_ORIGINS_RAW: str = Field(
-        default="http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000",
+        default="http://localhost:5500,http://127.0.0.1:5500,http://localhost:8000,http://127.0.0.1:8000,http://localhost:3000,http://127.0.0.1:3000",
         alias="ALLOWED_ORIGINS",
         description="Comma-separated list of frontend origins allowed to call this API.",
     )
