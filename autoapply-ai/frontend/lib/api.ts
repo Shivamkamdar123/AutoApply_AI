@@ -48,10 +48,18 @@ export interface JobMatch {
   recommended: boolean;
 }
 
+export interface SourceStatusItem {
+  status: "ok" | "error" | "fallback" | string;
+  count?: number;
+  accepted?: number;
+  error?: string | null;
+}
+
 export interface JobMatchResponse {
   matches: JobMatch[];
-  total_matched: number;
-  sources_status: Record<string, string>;
+  total_found?: number;
+  total_matched?: number;
+  sources_status: Record<string, SourceStatusItem | string>;
 }
 
 export interface FieldMappingDecision {

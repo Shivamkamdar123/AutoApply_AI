@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { JobMatch } from "@/lib/api";
+import { JobMatch, SourceStatusItem } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Search, Sparkles, ExternalLink, Filter } from "lucide-react";
 
 interface JobsTableProps {
   matches: JobMatch[];
-  sourcesStatus?: Record<string, string>;
+  sourcesStatus?: Record<string, SourceStatusItem | string>;
   isLoading?: boolean;
 }
 
@@ -67,8 +67,23 @@ export function JobsTable({
 
         {/* Per-source live health chips */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {Object.entries(sourcesStatus).map(([source, status]) => {
-            const isOk = status === "ok";
+          {Object.entries(sourcesStatus).map(([source, info]) => {
+            const isObj = typeof info === "object" && info !== null;
+            const statusStr = isObj ? (info as SourceStatusItem).status : String(info);
+            const count = isObj ? ((info as SourceStatusItem).count ?? (info as SourceStatusItem).accepted) : null;
+            const error = isObj ? (info as SourceStatusItem).error : null;
+            const isOk = statusStr === "ok";
+            const isFallback = statusStr === "fallback";
+
+            let label = statusStr;
+            if (error) {
+              label = error;
+            } else if (count !== null && count !== undefined) {
+              label = `${count} found`;
+            } else if (isFallback) {
+              label = "fallback";
+            }
+
             return (
               <span
                 key={source}
@@ -76,12 +91,20 @@ export function JobsTable({
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
-                    isOk ? "bg-semantic-green" : "bg-semantic-amber"
+                    isOk ? "bg-semantic-green" : isFallback ? "bg-semantic-amber" : "bg-semantic-red"
                   }`}
                 />
                 <span className="capitalize">{source}:</span>
-                <span className={isOk ? "text-semantic-green" : "text-semantic-amber"}>
-                  {status}
+                <span
+                  className={
+                    isOk
+                      ? "text-semantic-green"
+                      : isFallback
+                      ? "text-semantic-amber"
+                      : "text-semantic-red"
+                  }
+                >
+                  {label}
                 </span>
               </span>
             );

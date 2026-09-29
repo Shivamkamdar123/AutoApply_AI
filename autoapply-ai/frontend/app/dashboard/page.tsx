@@ -100,8 +100,10 @@ export default function DashboardPage() {
       queryClient.invalidateQueries({ queryKey: ["review-queue"] });
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       toast("Pipeline cycle complete! Matched postings refreshed.", "success");
+      const foundCount = data.total_found ?? data.total_matched ?? (data.matches?.length || 0);
+      const sourcesCount = data.sources_status ? Object.keys(data.sources_status).length : 0;
       addLog(
-        `Scraped & matched ${data.total_matched} positions. Evaluated across ${Object.keys(data.sources_status).length} live sources.`,
+        `Scraped & matched ${foundCount} positions. Evaluated across ${sourcesCount} live sources.`,
         "success",
         "match"
       );
