@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoApply AI Copilot</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="logo-row">
+      <div class="status-dot" id="connection-dot"></div>
+      <span class="logo-title">AutoApply AI</span>
+      <span class="badge">Copilot</span>
+    </div>
+    <div class="subtitle" id="connection-label">Connecting to agent backend...</div>
+  </div>
+
+  <div class="content">
+    <div class="card" id="user-card">
+      <div class="card-row">
+        <span class="card-label">User</span>
+        <span class="card-val" id="user-name">Loading...</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Resume</span>
+        <span class="card-val" id="resume-status">-</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Skills</span>
+        <span class="card-val" id="skills-count">0 extracted</span>
+      </div>
+    </div>
+
+    <div class="section-title">Backend Connection</div>
+    <div class="input-group">
+      <label for="api-url">API Endpoint</label>
+      <input type="text" id="api-url" value="http://127.0.0.1:8000" placeholder="http://127.0.0.1:8000">
+    </div>
+
+    <div class="input-group">
+      <label for="auth-token">Auth Token (JWT)</label>
+      <input type="password" id="auth-token" placeholder="Paste access token from web app">
+    </div>
+
+    <button id="save-btn" class="btn primary-btn">Save & Sync Connection</button>
+    <button id="open-app-btn" class="btn secondary-btn">Open Web App (localhost:3000)</button>
+
+    <div class="info-box">
+      <strong>Active Platforms:</strong>
+      <div class="platform-tags">
+        <span class="tag">LinkedIn</span>
+        <span class="tag">Indeed</span>
+        <span class="tag">Naukri</span>
+      </div>
+      <p class="hint">Navigate to any job page on these sites. The AutoApply Copilot panel will appear automatically on the page.</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

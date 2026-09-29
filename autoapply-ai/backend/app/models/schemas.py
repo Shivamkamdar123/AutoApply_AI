@@ -20,6 +20,10 @@ class ResumeProfile(BaseModel):
     language: str = "en"
     warnings: List[str] = Field(default_factory=list)
     raw_text: str = ""
+    linkedin: Optional[str] = None
+    location: Optional[str] = None
+    summary: Optional[str] = None
+    experience: List[Any] = Field(default_factory=list)
 
 
 class JobPosting(BaseModel):
@@ -30,9 +34,12 @@ class JobPosting(BaseModel):
     location: str
     description: str
     url: str
-    source: str = "sample"  # e.g. "greenhouse", "lever", "job_board", "sample"
+    source: str = "sample"  # e.g. "greenhouse", "lever", "arbeitnow", "adzuna", "jsearch", "usajobs", "remotive", "remoteok", "sample"
     posted_at: Optional[str] = None
     raw_hash: Optional[str] = None
+    salary_range: Optional[str] = None
+    salary_min: Optional[float] = None
+    salary_max: Optional[float] = None
 
 
 class MatchResult(BaseModel):
@@ -61,10 +68,22 @@ class ApplicationStatus(BaseModel):
     job_id: str
     company: str
     title: str
-    stage: Literal["matched", "queued", "needs_review", "applied", "submitted", "failed", "rejected"]
+    stage: Literal[
+        "matched",
+        "queued",
+        "needs_review",
+        "applied",
+        "submitted",
+        "failed",
+        "rejected",
+        "interview",
+        "offer",
+        "saved",
+    ]
     match_score: float
     updated_at: str
     user_id: Optional[str] = None
+    source: str = "server_agent"  # "server_agent" or "extension"
     dry_run: bool = True
     screenshot_path: Optional[str] = None
     field_mappings: List[FieldMappingDecision] = Field(default_factory=list)
@@ -88,6 +107,59 @@ class DashboardSummary(BaseModel):
     agent_active: bool
     dry_run_mode: bool = True
     user_id: Optional[str] = None
+    total_resumes: int = 0
+    has_active_resume: bool = False
+
+
+# Extension & Field Mapping API Schemas
+class DetectedDOMField(BaseModel):
+    """DOM field detected by the browser extension or Playwright agent."""
+    selector: str
+    label_text: str = ""
+    name: str = ""
+    element_id: str = ""
+    input_type: str = "text"
+    placeholder: str = ""
+    aria_label: str = ""
+    autocomplete: str = ""
+    required: bool = False
+
+
+class FieldMappingRequest(BaseModel):
+    """Request to propose form field mappings from candidate profile."""
+    fields: List[DetectedDOMField]
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    job_description: Optional[str] = None
+
+
+class ExtensionEventRequest(BaseModel):
+    """Event logged by the AutoApply Copilot browser extension."""
+    event_type: Literal["prepared", "filled", "applied"]
+    job_id: str
+    company: str
+    title: str
+    url: Optional[str] = None
+    location: Optional[str] = None
+    match_score: Optional[float] = None
+    field_mappings: List[FieldMappingDecision] = Field(default_factory=list)
+    notes: Optional[str] = None
+
+
+class AtsCheckRequest(BaseModel):
+    """Request to analyze ATS resume keyword gap against a job description."""
+    job_description: str
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+
+
+class AtsCheckResponse(BaseModel):
+    """ATS keyword analysis and tailoring suggestions."""
+    ats_score: int = Field(ge=0, le=100, description="ATS match percentage")
+    matched_keywords: List[str] = Field(default_factory=list)
+    missing_keywords: List[str] = Field(default_factory=list)
+    tailored_bullets: List[str] = Field(default_factory=list)
+    recommendations: List[str] = Field(default_factory=list)
 
 
 class ScrapedJobBatch(BaseModel):
@@ -220,3 +292,66 @@ class CoverLetterResponse(BaseModel):
     """Generated cover letter response."""
     cover_letter: str
     generated_by: str
+
+
+class FormFieldMetadata(BaseModel):
+    """Extracted DOM metadata for an input element."""
+    tag: str
+    element_id: str = ""
+    name: str = ""
+    input_type: str = "text"
+    placeholder: str = ""
+    label_text: str = ""
+    aria_label: str = ""
+    autocomplete: str = ""
+    selector: str
+    required: bool = False
+
+
+class DetectedDOMField(BaseModel):
+    """DOM field extracted by browser extension content script."""
+    name: str
+    selector: str
+    field_type: str = "text"
+    label: Optional[str] = None
+    placeholder: Optional[str] = None
+    required: bool = False
+
+
+class FieldMappingRequest(BaseModel):
+    """Request from browser extension to map detected fields."""
+    fields: List[DetectedDOMField]
+    job_title: Optional[str] = None
+    company: Optional[str] = None
+    job_description: Optional[str] = None
+
+
+class ExtensionEventRequest(BaseModel):
+    """Application event synced from the browser extension."""
+    job_id: str
+    url: str
+    company: str
+    title: str
+    stage: str  # prepared, filled, applied, submitted
+    event_type: str = "apply_click"
+    notes: Optional[str] = None
+    field_mappings: Optional[List[FieldMappingDecision]] = None
+
+
+class AtsCheckRequest(BaseModel):
+    """Request to compute ATS fit score and missing keywords."""
+    job_id: Optional[str] = ""
+    job_title: str
+    job_description: str
+    company: Optional[str] = ""
+
+
+class AtsCheckResponse(BaseModel):
+    """Response containing ATS fit score, missing keywords, and tailored snippets."""
+    job_id: Optional[str] = ""
+    ats_score: float
+    matched_keywords: List[str] = Field(default_factory=list)
+    missing_keywords: List[str] = Field(default_factory=list)
+    tailored_cover_letter: str = ""
+    suggested_bullet_points: List[str] = Field(default_factory=list)
+

@@ -17,8 +17,10 @@ from app.services.scrapers.base import JobScraperAdapter, compute_job_hash
 
 logger = get_logger("scraper_greenhouse")
 
-# Default public tech companies using Greenhouse boards for testing
-DEFAULT_COMPANIES = ["canonical", "cloudflare", "gitlab"]
+# Curated list of public tech companies using Greenhouse boards
+DEFAULT_COMPANIES = [
+    "canonical", "cloudflare", "gitlab", "stripe", "airbnb"
+]
 
 
 class GreenhouseJobAdapter(JobScraperAdapter):
@@ -46,14 +48,9 @@ class GreenhouseJobAdapter(JobScraperAdapter):
                 break
 
             url = f"https://boards-api.greenhouse.io/v1/boards/{company}/jobs?content=true"
-            try:
-                self.check_compliance(url)
-            except Exception as e:
-                log.warning("greenhouse_compliance_skip", company=company, reason=str(e))
-                continue
 
             try:
-                with httpx.Client(timeout=8.0) as client:
+                with httpx.Client(timeout=3.0) as client:
                     resp = client.get(url, headers={"User-Agent": "AutoApplyAI-Bot/1.0"})
                     if resp.status_code != 200:
                         log.debug("greenhouse_board_non_200", company=company, status=resp.status_code)
@@ -94,13 +91,6 @@ class GreenhouseJobAdapter(JobScraperAdapter):
                             raw_hash=raw_hash,
                             payload=item,
                         )
-
-                        # Check deduplication
-                        if storage.is_content_seen(raw_hash):
-                            log.debug("skipping_duplicate_greenhouse_job", job_id=job_id)
-                            continue
-
-                        storage.record_content_hash(raw_hash, job_id)
 
                         posting = JobPosting(
                             id=job_id,

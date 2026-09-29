@@ -38,6 +38,54 @@ export function AgentLogTerminal({ logs = [], onClear }: AgentLogTerminalProps) 
 
   const allLogs = logs.length > 0 ? logs : internalLogs;
 
+  // Stream live structlog events from backend via SSE
+  useEffect(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api";
+    let eventSource: EventSource | null = null;
+
+    try {
+      eventSource = new EventSource(`${apiBase}/agent/events`);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const level = (data.level || "info").toLowerCase();
+          const logType: "info" | "warn" | "success" | "error" =
+            level === "warning" || level === "warn"
+              ? "warn"
+              : level === "error"
+              ? "error"
+              : data.event?.includes("COMPLETE") || data.event?.includes("APPLIED")
+              ? "success"
+              : "info";
+
+          const timeStr = data.timestamp
+            ? data.timestamp.split("T")[1]?.replace("Z", "")
+            : new Date().toLocaleTimeString([], { hour12: false });
+
+          setInternalLogs((prev) => {
+            const entry: LogEntry = {
+              id: `${Date.now()}-${Math.random()}`,
+              timestamp: timeStr,
+              correlationId: data.correlation_id || data.event || "agent",
+              message: data.message,
+              type: logType,
+            };
+            return [...prev.slice(-150), entry];
+          });
+        } catch (_) {}
+      };
+
+      eventSource.onerror = () => {
+        // Fallback gracefully on reconnection
+      };
+    } catch (_) {}
+
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, []);
+
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;

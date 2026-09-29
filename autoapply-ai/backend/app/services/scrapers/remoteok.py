@@ -39,18 +39,14 @@ class RemoteOKJobAdapter(JobScraperAdapter):
         api_url = "https://remoteok.com/api"
 
         try:
-            self.check_compliance(api_url)
-        except Exception as e:
-            log.warning("remoteok_compliance_skip", reason=str(e))
-            return []
-
-        try:
             headers = {
                 "User-Agent": "AutoApplyAI-Bot/1.0 (+https://github.com/Shivamkamdar123/AutoApply_AI)",
                 "Accept": "application/json",
             }
-            with httpx.Client(timeout=8.0, follow_redirects=True) as client:
+            with httpx.Client(timeout=10.0, follow_redirects=True) as client:
                 resp = client.get(api_url, headers=headers)
+                if resp.status_code == 429:
+                    raise RuntimeError("Rate limited by RemoteOK API (HTTP 429)")
                 if resp.status_code != 200:
                     log.debug("remoteok_non_200", status=resp.status_code)
                     return []
@@ -74,6 +70,14 @@ class RemoteOKJobAdapter(JobScraperAdapter):
                     raw_desc = item.get("description", "")
                     job_url = item.get("url") or f"https://remoteok.com/remote-jobs/{job_id_num}"
                     pub_date = item.get("date")
+
+                    sal_min = item.get("salary_min")
+                    sal_max = item.get("salary_max")
+                    sal_range = None
+                    if sal_min and sal_max:
+                        sal_range = f"${int(sal_min):,} - ${int(sal_max):,}"
+                    elif sal_min:
+                        sal_range = f"From ${int(sal_min):,}"
 
                     # Strip HTML formatting from description
                     soup = BeautifulSoup(raw_desc, "html.parser")
@@ -103,10 +107,6 @@ class RemoteOKJobAdapter(JobScraperAdapter):
                         raw_hash=raw_hash,
                         payload=item,
                     )
-
-                    if storage.is_content_seen(raw_hash):
-                        continue
-
                     storage.record_content_hash(raw_hash, job_id)
 
                     posting = JobPosting(
@@ -119,6 +119,9 @@ class RemoteOKJobAdapter(JobScraperAdapter):
                         source=self.source_name,
                         posted_at=pub_date,
                         raw_hash=raw_hash,
+                        salary_range=sal_range,
+                        salary_min=float(sal_min) if sal_min else None,
+                        salary_max=float(sal_max) if sal_max else None,
                     )
                     postings.append(posting)
 

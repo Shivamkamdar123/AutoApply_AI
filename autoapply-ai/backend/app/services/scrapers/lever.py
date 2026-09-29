@@ -16,7 +16,8 @@ from app.services.scrapers.base import JobScraperAdapter, compute_job_hash
 
 logger = get_logger("scraper_lever")
 
-DEFAULT_LEVER_COMPANIES = ["palantir", "deliveroo", "reddit"]
+# Curated list of public tech companies using Lever boards
+DEFAULT_LEVER_COMPANIES = ["palantir", "kraken", "fullstory", "airtable"]
 
 
 class LeverJobAdapter(JobScraperAdapter):
@@ -43,14 +44,9 @@ class LeverJobAdapter(JobScraperAdapter):
                 break
 
             url = f"https://api.lever.co/v0/postings/{company}?mode=json"
-            try:
-                self.check_compliance(url)
-            except Exception as e:
-                log.warning("lever_compliance_skip", company=company, reason=str(e))
-                continue
 
             try:
-                with httpx.Client(timeout=8.0) as client:
+                with httpx.Client(timeout=2.5) as client:
                     resp = client.get(url, headers={"User-Agent": "AutoApplyAI-Bot/1.0"})
                     if resp.status_code != 200:
                         log.debug("lever_board_non_200", company=company, status=resp.status_code)
@@ -88,12 +84,6 @@ class LeverJobAdapter(JobScraperAdapter):
                             raw_hash=raw_hash,
                             payload=item,
                         )
-
-                        if storage.is_content_seen(raw_hash):
-                            log.debug("skipping_duplicate_lever_job", job_id=job_id)
-                            continue
-
-                        storage.record_content_hash(raw_hash, job_id)
 
                         posting = JobPosting(
                             id=job_id,

@@ -119,6 +119,16 @@ def score_job(
         engine = get_similarity_engine()
 
     try:
+        if not job.description.strip() or not (resume.raw_text or "").strip():
+            return MatchResult(
+                job=job,
+                score=0.0,
+                matched_skills=[],
+                recommended=False,
+                scoring_method=settings.SIMILARITY_ENGINE,
+                notes="Empty description or resume text",
+            )
+
         raw_similarity = engine.compute_similarity(resume.raw_text, job.description)
         matched_skills = _skill_overlap(resume.skills, job.description)
 
@@ -182,5 +192,16 @@ def rank_jobs(
             continue
 
     ranked = sorted(results, key=lambda r: r.score, reverse=True)
-    log.info("ranking_jobs_complete", scored_count=len(ranked))
+    rec_count = len([r for r in ranked if r.recommended])
+    log.info("ranking_jobs_complete", scored_count=len(ranked), recommended_count=rec_count)
+
+    from app.services.event_bus import event_bus
+    event_bus.publish(
+        event_type="MATCH_CYCLE_COMPLETE",
+        message=f"Matched candidate profile against {len(ranked)} jobs: {rec_count} recommended (threshold: {int(settings.MATCH_THRESHOLD * 100)}%)",
+        level="INFO",
+        correlation_id=correlation_id,
+        data={"total_scored": len(ranked), "recommended": rec_count},
+    )
+
     return ranked

@@ -39,6 +39,9 @@ export interface JobPosting {
   url?: string | null;
   description: string;
   source: string;
+  salary_range?: string | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
 }
 
 export interface JobMatch {
@@ -49,7 +52,7 @@ export interface JobMatch {
 }
 
 export interface SourceStatusItem {
-  status: "ok" | "error" | "fallback" | string;
+  status: "ok" | "no_results" | "no_key" | "rate_limited" | "error" | "fallback" | string;
   count?: number;
   accepted?: number;
   error?: string | null;
@@ -76,12 +79,15 @@ export interface ApplicationStatus {
   user_id: string;
   company: string;
   title: string;
-  stage: "located" | "mapped" | "needs_review" | "applied" | "submitted" | "rejected" | "failed";
+  stage: "saved" | "located" | "mapped" | "needs_review" | "applied" | "submitted" | "rejected" | "failed" | "interview" | "offer";
   match_score: number;
   updated_at: string;
   notes?: string | null;
   error_details?: string | null;
   dry_run: boolean;
+  source?: string;
+  url?: string | null;
+  location?: string | null;
   field_mappings: FieldMappingDecision[];
 }
 
@@ -89,14 +95,16 @@ export interface DashboardSummary {
   user_id: string;
   total_matched: number;
   total_applied: number;
-  total_submitted: number;
+  total_submitted?: number;
   total_needs_review: number;
-  total_rejected: number;
+  total_rejected?: number;
   average_match_score: number;
   agent_active: boolean;
   dry_run_mode: boolean;
-  auto_submit_enabled: boolean;
-  top_recommended_jobs: JobMatch[];
+  auto_submit_enabled?: boolean;
+  total_resumes?: number;
+  has_active_resume?: boolean;
+  top_recommended_jobs?: JobMatch[];
 }
 
 export class ApiError extends Error {
@@ -281,6 +289,27 @@ export const api = {
         body: JSON.stringify(data),
       }
     ),
+
+  // Applications Tracker & Kanban
+  getAllApplications: () => apiRequest<ApplicationStatus[]>("/applications"),
+
+  updateApplicationStage: (jobId: string, stage: string) =>
+    apiRequest<ApplicationStatus>(`/review-queue/stage/${jobId}?stage=${encodeURIComponent(stage)}`, {
+      method: "POST",
+    }),
+
+  // ATS Keyword Gap Check
+  getAtsKeywordGap: (data: { job_id?: string; job_title: string; job_description: string; company?: string }) =>
+    apiRequest<{
+      ats_score: number;
+      matched_keywords: string[];
+      missing_keywords: string[];
+      tailored_cover_letter: string;
+      suggested_bullet_points: string[];
+    }>("/ats/keyword-gap", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // Form Snapshot Screenshot
   getScreenshotUrl: (jobId: string) => `${API_BASE}/screenshots/${jobId}`,

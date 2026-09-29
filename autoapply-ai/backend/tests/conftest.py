@@ -17,11 +17,24 @@ from app.models.schemas import JobPosting, ResumeProfile, UserResponse
 
 
 @pytest.fixture(autouse=True)
-def isolate_test_db(tmp_path: Path, monkeypatch):
+def isolate_test_db(tmp_path: Path, monkeypatch, request):
     """Ensures each test case runs against an isolated, fresh SQLite database."""
     test_db = tmp_path / "isolated_test.db"
     monkeypatch.setattr(storage, "db_path", test_db)
     storage._init_db()
+
+    # For unit and profile tests, mock external network calls to return fast sample jobs
+    if "test_job_scraper" not in request.node.nodeid and "test_end_to_end" not in request.node.nodeid:
+        from app.services.scrapers.sample import SampleJobAdapter
+        sample_adapter = SampleJobAdapter()
+        def fast_fetch(*args, **kwargs):
+            return sample_adapter.fetch_jobs(limit=kwargs.get("limit", 10))
+        def fast_fetch_status(*args, **kwargs):
+            jobs = sample_adapter.fetch_jobs(limit=kwargs.get("limit", 10))
+            return jobs, {"sample": {"status": "ok", "count": len(jobs), "accepted": len(jobs)}}
+        monkeypatch.setattr("app.services.job_scraper.scraper_service.fetch_jobs_from_all", fast_fetch)
+        monkeypatch.setattr("app.services.job_scraper.scraper_service.fetch_jobs_with_status", fast_fetch_status)
+
     yield
 
 

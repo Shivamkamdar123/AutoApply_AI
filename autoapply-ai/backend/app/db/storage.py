@@ -235,9 +235,13 @@ class JobStorage:
                     FROM old_applications;
                     """
                 )
-                conn.execute("DROP TABLE old_applications;")
-
             conn.execute("CREATE INDEX IF NOT EXISTS idx_applications_user_stage ON applications(user_id, stage);")
+
+            # Ensure 'source' column exists in applications
+            cursor = conn.execute("PRAGMA table_info(applications);")
+            app_cols = [r["name"] for r in cursor.fetchall()]
+            if "source" not in app_cols:
+                conn.execute("ALTER TABLE applications ADD COLUMN source TEXT NOT NULL DEFAULT 'server_agent';")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_applications_user_updated ON applications(user_id, updated_at DESC);")
 
     # -------------------------------------------------------------
@@ -634,14 +638,15 @@ class JobStorage:
         mappings_json = (
             json.dumps([m.model_dump() for m in app.field_mappings]) if app.field_mappings else "[]"
         )
+        source = getattr(app, "source", None) or "server_agent"
 
         with self._get_connection() as conn:
             conn.execute(
                 """
                 INSERT INTO applications (
                     id, user_id, job_id, company, title, location, url, stage, match_score,
-                    dry_run, screenshot_path, field_mappings_json, notes, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    dry_run, screenshot_path, field_mappings_json, notes, source, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(user_id, job_id) DO UPDATE SET
                     company = excluded.company,
                     title = excluded.title,
@@ -653,6 +658,7 @@ class JobStorage:
                     screenshot_path = COALESCE(excluded.screenshot_path, applications.screenshot_path),
                     field_mappings_json = excluded.field_mappings_json,
                     notes = excluded.notes,
+                    source = excluded.source,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -669,6 +675,7 @@ class JobStorage:
                     app.screenshot_path,
                     mappings_json,
                     app.notes,
+                    source,
                     now,
                     now,
                 ),
@@ -719,6 +726,13 @@ class JobStorage:
                 (user_id,),
             )
             counts = {row["stage"]: row["cnt"] for row in cursor.fetchall()}
+
+            res_cursor = conn.execute(
+                "SELECT COUNT(*) as cnt FROM resumes WHERE user_id = ?",
+                (user_id,),
+            )
+            resume_cnt = res_cursor.fetchone()["cnt"]
+
             return {
                 "matched": counts.get("matched", 0),
                 "queued": counts.get("queued", 0),
@@ -727,6 +741,10 @@ class JobStorage:
                 "submitted": counts.get("submitted", 0),
                 "failed": counts.get("failed", 0),
                 "rejected": counts.get("rejected", 0),
+                "interview": counts.get("interview", 0),
+                "offer": counts.get("offer", 0),
+                "saved": counts.get("saved", 0),
+                "total_resumes": resume_cnt,
             }
 
     def _row_to_application(self, row: sqlite3.Row) -> ApplicationStatus:
@@ -739,6 +757,9 @@ class JobStorage:
             except Exception:
                 field_mappings = []
 
+        keys = row.keys()
+        source = row["source"] if "source" in keys else "server_agent"
+
         return ApplicationStatus(
             job_id=row["job_id"],
             company=row["company"],
@@ -746,7 +767,8 @@ class JobStorage:
             stage=row["stage"],
             match_score=float(row["match_score"]),
             updated_at=row["updated_at"],
-            user_id=row["user_id"] if "user_id" in row.keys() else None,
+            user_id=row["user_id"] if "user_id" in keys else None,
+            source=source,
             dry_run=bool(row["dry_run"]),
             screenshot_path=row["screenshot_path"],
             field_mappings=field_mappings,

@@ -11,15 +11,18 @@ export function PipelineStepper({ summary }: PipelineStepperProps) {
   const applied = summary?.total_applied || 0;
   const matched = summary?.total_matched || 0;
 
-  // Active step is Review if pending review exists, otherwise Verified or Matched
-  const activeStep = needsReview > 0 ? 3 : applied > 0 ? 4 : matched > 0 ? 2 : 1;
+  const totalResumes = summary?.total_resumes ?? 0;
+  const hasResume = summary?.has_active_resume ?? (totalResumes > 0);
+
+  // Active step is 1 if no resume, 3 if pending review, 4 if applied, 2 if matched
+  const activeStep = !hasResume ? 1 : needsReview > 0 ? 3 : applied > 0 ? 4 : matched > 0 ? 2 : 1;
 
   const steps = [
     {
       step: 1,
       name: "Resume Parsed",
-      desc: "Skills & history extracted",
-      count: 1,
+      desc: hasResume ? "Skills & history extracted" : "Upload resume in Profile",
+      count: totalResumes,
     },
     {
       step: 2,

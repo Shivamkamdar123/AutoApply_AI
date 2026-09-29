@@ -25,7 +25,17 @@ export default function DashboardPage() {
 
   const [searchKeywords, setSearchKeywords] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
-  const [selectedSources, setSelectedSources] = useState<string[]>(["greenhouse", "lever", "remotive", "remoteok", "sample"]);
+  const [selectedSources, setSelectedSources] = useState<string[]>([
+    "arbeitnow",
+    "adzuna",
+    "jsearch",
+    "usajobs",
+    "greenhouse",
+    "lever",
+    "remotive",
+    "remoteok",
+    "sample",
+  ]);
   const [logs, setLogs] = useState<LogEntry[]>([
     {
       id: "l-1",
@@ -236,7 +246,15 @@ export default function DashboardPage() {
           <Skeleton className="h-64 rounded-xl" />
         </div>
       ) : (
-        <JobsTable matches={matches} sourcesStatus={sourcesStatus} />
+        <JobsTable
+          matches={matches}
+          sourcesStatus={sourcesStatus}
+          onRefresh={() => {
+            queryClient.invalidateQueries({ queryKey: ["jobs"] });
+            queryClient.invalidateQueries({ queryKey: ["review-queue"] });
+            queryClient.invalidateQueries({ queryKey: ["summary"] });
+          }}
+        />
       )}
 
       {/* Agent Decision Log Terminal */}

@@ -28,7 +28,7 @@ from app.core.exceptions import (
 )
 from app.core.logging import get_logger
 from app.db.storage import storage
-from app.models.schemas import ApplicationStatus, FieldMappingDecision, JobPosting, ResumeProfile
+from app.models.schemas import ApplicationStatus, FieldMappingDecision, FormFieldMetadata, JobPosting, ResumeProfile
 
 logger = get_logger("browser_agent")
 
@@ -45,20 +45,6 @@ class AgentState(str, Enum):
     CONFIRMING = "confirming"
     COMPLETED = "completed"
     FAILED = "failed"
-
-
-class FormFieldMetadata(BaseModel):
-    """Extracted DOM metadata for an input element."""
-    tag: str
-    element_id: str = ""
-    name: str = ""
-    input_type: str = "text"
-    placeholder: str = ""
-    label_text: str = ""
-    aria_label: str = ""
-    autocomplete: str = ""
-    selector: str
-    required: bool = False
 
 
 class FormSiteAdapter:
@@ -189,128 +175,8 @@ class BrowserAgent:
         self.current_state = AgentState.MAPPING_FIELDS
         log = get_logger("browser_agent", correlation_id=correlation_id)
         log.info("agent_state_transition", state=self.current_state.value)
-
-        decisions: List[FieldMappingDecision] = []
-
-        # Split candidate name into first and last if needed
-        parts = (profile.full_name or "Applicant").split()
-        first_name = parts[0] if parts else ""
-        last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
-
-        for f in fields:
-            combined_context = f"{f.label_text} {f.name} {f.element_id} {f.placeholder} {f.autocomplete} {f.aria_label}".lower()
-
-            # 1. First Name
-            if any(term in combined_context for term in ["first_name", "firstname", "first name", "given-name"]):
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="First Name",
-                        field_type=f.input_type,
-                        selector=f.selector,
-                        value_filled=first_name,
-                        confidence=0.98,
-                        source_field="profile.full_name",
-                        rationale="Target field labeled for candidate given name",
-                    )
-                )
-            # 2. Last Name
-            elif any(term in combined_context for term in ["last_name", "lastname", "last name", "family-name", "surname"]):
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="Last Name",
-                        field_type=f.input_type,
-                        selector=f.selector,
-                        value_filled=last_name,
-                        confidence=0.98,
-                        source_field="profile.full_name",
-                        rationale="Target field labeled for candidate surname",
-                    )
-                )
-            # 3. Full Name
-            elif any(term in combined_context for term in ["full name", "fullname", "name", "your name"]) and f.input_type != "email":
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="Full Name",
-                        field_type=f.input_type,
-                        selector=f.selector,
-                        value_filled=profile.full_name or "Applicant",
-                        confidence=0.95,
-                        source_field="profile.full_name",
-                        rationale="Target field labeled for applicant full legal name",
-                    )
-                )
-            # 4. Email
-            elif f.input_type == "email" or any(term in combined_context for term in ["email", "e-mail"]):
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="Email Address",
-                        field_type=f.input_type,
-                        selector=f.selector,
-                        value_filled=profile.email or "candidate@example.com",
-                        confidence=0.99,
-                        source_field="profile.email",
-                        rationale="Standard email pattern and attribute match",
-                    )
-                )
-            # 5. Phone
-            elif f.input_type == "tel" or any(term in combined_context for term in ["phone", "mobile", "telephone", "contact number"]):
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="Phone Number",
-                        field_type=f.input_type,
-                        selector=f.selector,
-                        value_filled=profile.phone or "+1 (555) 010-9999",
-                        confidence=0.95,
-                        source_field="profile.phone",
-                        rationale="Telephone type or label matched parsed candidate phone",
-                    )
-                )
-            # 6. LinkedIn URL
-            elif any(term in combined_context for term in ["linkedin", "profile"]):
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="LinkedIn Profile",
-                        field_type=f.input_type,
-                        selector=f.selector,
-                        value_filled="https://linkedin.com/in/applicant-profile",
-                        confidence=0.88,
-                        source_field="profile.linkedin",
-                        rationale="Candidate professional profile link",
-                    )
-                )
-            # 7. Experience
-            elif any(term in combined_context for term in ["experience", "years"]):
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="Years of Experience",
-                        field_type=f.input_type,
-                        selector=f.selector,
-                        value_filled=str(profile.years_experience or 3.0),
-                        confidence=0.90,
-                        source_field="profile.years_experience",
-                        rationale="Extracted years of experience estimation",
-                    )
-                )
-            # 8. Cover Letter / Notes
-            elif f.tag == "textarea" or any(term in combined_context for term in ["cover letter", "message", "note", "comments"]):
-                cover_text = (
-                    f"Hi, I am enthusiastic about applying for this role. "
-                    f"With my background in {', '.join(profile.skills[:4])}, I look forward to discussing how I can contribute."
-                )
-                decisions.append(
-                    FieldMappingDecision(
-                        field_name="Cover Letter",
-                        field_type="textarea",
-                        selector=f.selector,
-                        value_filled=cover_text,
-                        confidence=0.85,
-                        source_field="profile.skills",
-                        rationale="Generated tailored pitch from matched skills",
-                    )
-                )
-
-        log.info("mapping_complete", decisions_count=len(decisions))
-        return decisions
+        from app.services.field_mapper import map_fields_heuristic
+        return map_fields_heuristic(fields, profile, correlation_id=correlation_id)
 
     async def fill_form(
         self,

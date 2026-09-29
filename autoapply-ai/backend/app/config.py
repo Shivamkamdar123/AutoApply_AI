@@ -78,6 +78,13 @@ class Settings(BaseSettings):
     # Optional LLM integration (Anthropic Claude)
     ANTHROPIC_API_KEY: Optional[str] = None
 
+    # Real Aggregator API Settings
+    ADZUNA_APP_ID: Optional[str] = Field(default=None, description="Adzuna Developer Application ID")
+    ADZUNA_APP_KEY: Optional[str] = Field(default=None, description="Adzuna Developer Application Key")
+    RAPIDAPI_KEY: Optional[str] = Field(default=None, description="RapidAPI Key for JSearch job aggregator")
+    USAJOBS_API_KEY: Optional[str] = Field(default=None, description="USAJobs Developer API Key")
+    USAJOBS_USER_AGENT: Optional[str] = Field(default="autoapply-ai@example.com", description="User Agent email for USAJobs API")
+
     # Uploads & Limits
     MAX_UPLOAD_SIZE_BYTES: int = 15 * 1024 * 1024  # 15 MB
 

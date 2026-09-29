@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
+import json
 
 from app.api.auth import get_current_user
 from app.config import settings
@@ -23,10 +24,14 @@ from app.core.security import upload_rate_limiter
 from app.db.storage import storage
 from app.models.schemas import (
     ApplicationStatus,
+    AtsCheckRequest,
+    AtsCheckResponse,
     CoverLetterRequest,
     CoverLetterResponse,
     DashboardSummary,
+    ExtensionEventRequest,
     FieldMappingDecision,
+    FieldMappingRequest,
     JobMatchResponse,
     MatchResult,
     ResumeItemResponse,
@@ -36,7 +41,10 @@ from app.models.schemas import (
     UserProfileUpdate,
     UserResponse,
 )
+from app.services.ats_service import compute_ats_gap
 from app.services.cover_letter import generate_cover_letter
+from app.services.event_bus import event_bus
+from app.services.field_mapper import map_detected_dom_fields
 from app.services.job_scraper import scraper_service
 from app.services.matcher import rank_jobs
 from app.services.resume_parser import parse_resume
@@ -487,6 +495,8 @@ async def dashboard_summary(current_user: UserResponse = Depends(get_current_use
         if user_apps
         else 0.0
     )
+    total_resumes = counts.get("total_resumes", 0)
+    has_active_resume = total_resumes > 0
 
     return DashboardSummary(
         total_matched=total_matched,
@@ -496,6 +506,8 @@ async def dashboard_summary(current_user: UserResponse = Depends(get_current_use
         agent_active=agent_active,
         dry_run_mode=settings.DRY_RUN,
         user_id=current_user.id,
+        total_resumes=total_resumes,
+        has_active_resume=has_active_resume,
     )
 
 
@@ -510,6 +522,169 @@ async def toggle_agent(
     storage.set_agent_status(current_user.id, new_status)
     logger.info("agent_status_toggled", user_id=current_user.id, active=new_status)
     return {"agent_active": new_status, "dry_run": settings.DRY_RUN}
+
+
+# -------------------------------------------------------------
+# Real-Time SSE Agent Log Stream
+# -------------------------------------------------------------
+@router.get("/agent/events")
+async def stream_agent_events():
+    """Server-Sent Events (SSE) streaming real-time agent log activity to frontend."""
+    async def event_generator():
+        async for event in event_bus.subscribe():
+            data_str = json.dumps(event)
+            yield f"data: {data_str}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# -------------------------------------------------------------
+# Extension & Browser Agent Shared Endpoints
+# -------------------------------------------------------------
+@router.post("/browser/map-fields", response_model=List[FieldMappingDecision])
+async def map_browser_fields(
+    req: FieldMappingRequest,
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Maps detected browser DOM form fields to authenticated user profile values."""
+    prof = storage.get_or_create_profile(current_user.id, current_user.email, current_user.full_name or "")
+    candidate = ResumeProfile(
+        full_name=prof.full_name or current_user.full_name or "Applicant",
+        email=prof.email or current_user.email,
+        phone=prof.phone or "",
+        skills=prof.skills,
+        years_experience=prof.years_experience or 3.0,
+        linkedin=prof.linkedin_url or "",
+        location=prof.location or "Remote",
+        language="en",
+    )
+    decisions = map_detected_dom_fields(
+        detected_fields=req.fields,
+        profile=candidate,
+        job_description=req.job_description,
+        correlation_id=current_user.id[:8],
+    )
+    event_bus.publish(
+        event_type="EXTENSION_FORM_ANALYZED",
+        message=f"[EXTENSION] Mapped {len(decisions)}/{len(req.fields)} DOM fields for {req.job_title or 'Job'}",
+        level="INFO",
+        correlation_id=current_user.id[:8],
+        data={"field_count": len(req.fields), "mapped_count": len(decisions)},
+    )
+    return decisions
+
+
+@router.post("/applications/extension-event")
+async def record_extension_event(
+    req: ExtensionEventRequest,
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Records extension application lifecycle events (prepare, fill, apply)."""
+    now = datetime.now(timezone.utc).isoformat()
+    app = storage.get_application(req.job_id, user_id=current_user.id)
+    if not app:
+        app = ApplicationStatus(
+            job_id=req.job_id,
+            user_id=current_user.id,
+            company=req.company,
+            title=req.title,
+            stage=req.stage,
+            match_score=0.85,
+            updated_at=now,
+            dry_run=False,
+            source="extension",
+            field_mappings=req.field_mappings or [],
+            notes=req.notes or f"Application via Chrome Extension ({req.event_type})",
+        )
+    else:
+        app.stage = req.stage
+        app.source = "extension"
+        app.updated_at = now
+        if req.notes:
+            app.notes = req.notes
+        if req.field_mappings:
+            app.field_mappings = req.field_mappings
+
+    storage.save_or_update_application(
+        app,
+        user_id=current_user.id,
+        url=req.url,
+        location="Remote",
+    )
+    event_bus.publish(
+        event_type="EXTENSION_APPLICATION_EVENT",
+        message=f"[EXTENSION] Job '{req.title}' at {req.company} status -> {req.stage.upper()}",
+        level="INFO",
+        correlation_id=current_user.id[:8],
+        data={"job_id": req.job_id, "stage": req.stage, "company": req.company},
+    )
+    return {"status": "ok", "job_id": req.job_id, "stage": app.stage}
+
+
+# -------------------------------------------------------------
+# ATS Score & Keyword Gap Endpoint
+# -------------------------------------------------------------
+@router.post("/ats/keyword-gap", response_model=AtsCheckResponse)
+async def check_ats_gap(
+    req: AtsCheckRequest,
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Evaluates candidate ATS match score and surfaces missing keywords against a job description."""
+    prof = storage.get_or_create_profile(current_user.id, current_user.email, current_user.full_name or "")
+    candidate = ResumeProfile(
+        full_name=prof.full_name or current_user.full_name or "Applicant",
+        email=prof.email or current_user.email,
+        phone=prof.phone or "",
+        skills=prof.skills,
+        years_experience=prof.years_experience or 3.0,
+        summary=prof.bio or "",
+        language="en",
+    )
+    response = compute_ats_gap(
+        profile=candidate,
+        job_description=req.job_description,
+        job_title=req.job_title,
+    )
+    response.job_id = req.job_id
+    return response
+
+
+# -------------------------------------------------------------
+# Kanban Application Stage Management
+# -------------------------------------------------------------
+@router.post("/review-queue/stage/{job_id}", response_model=ApplicationStatus)
+async def update_application_stage(
+    job_id: str,
+    stage: str = Query(..., description="Target stage: saved, needs_review, applied, submitted, interview, offer, rejected"),
+    current_user: UserResponse = Depends(get_current_user),
+):
+    """Updates an application's stage for Kanban board drag & drop or single-click workflows."""
+    valid_stages = {"saved", "needs_review", "applied", "submitted", "interview", "offer", "rejected"}
+    if stage not in valid_stages:
+        raise HTTPException(status_code=400, detail=f"Invalid stage '{stage}'. Allowed: {valid_stages}")
+
+    app = storage.get_application(job_id, user_id=current_user.id)
+    if not app:
+        raise HTTPException(status_code=404, detail=f"Application for '{job_id}' not found.")
+
+    app.stage = stage
+    app.updated_at = datetime.now(timezone.utc).isoformat()
+    storage.save_or_update_application(app, user_id=current_user.id)
+    event_bus.publish(
+        event_type="APPLICATION_STAGE_CHANGED",
+        message=f"Application for '{app.title}' at {app.company} moved to {stage.upper()}",
+        level="INFO",
+        correlation_id=current_user.id[:8],
+    )
+    return app
 
 
 # -------------------------------------------------------------
@@ -552,3 +727,4 @@ async def create_cover_letter(
         description=req.description,
     )
     return CoverLetterResponse(cover_letter=letter_text, generated_by=engine)
+

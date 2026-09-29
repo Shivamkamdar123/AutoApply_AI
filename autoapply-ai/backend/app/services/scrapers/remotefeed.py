@@ -35,17 +35,16 @@ class RemoteFeedJobAdapter(JobScraperAdapter):
         log.info("remotefeed_fetch_start", query=query, location=location)
 
         postings: List[JobPosting] = []
-        feed_url = f"https://remotive.com/api/remote-jobs?category=software-dev&limit={limit}"
+        if query:
+            feed_url = f"https://remotive.com/api/remote-jobs?search={httpx.URL('', params={'q': query}).params.get('q')}&limit={limit}"
+        else:
+            feed_url = f"https://remotive.com/api/remote-jobs?category=software-dev&limit={limit}"
 
         try:
-            self.check_compliance(feed_url)
-        except Exception as e:
-            log.warning("remotefeed_compliance_skip", reason=str(e))
-            return []
-
-        try:
-            with httpx.Client(timeout=8.0) as client:
+            with httpx.Client(timeout=10.0, follow_redirects=True) as client:
                 resp = client.get(feed_url, headers={"User-Agent": "AutoApplyAI-Bot/1.0"})
+                if resp.status_code == 429:
+                    raise RuntimeError("Rate limited by Remotive API (HTTP 429)")
                 if resp.status_code != 200:
                     log.debug("remotefeed_non_200", status=resp.status_code)
                     return []
@@ -64,6 +63,7 @@ class RemoteFeedJobAdapter(JobScraperAdapter):
                     raw_desc = item.get("description", "")
                     job_url = item.get("url", "")
                     pub_date = item.get("publication_date")
+                    sal_range = item.get("salary") or None
 
                     # Strip HTML
                     soup = BeautifulSoup(raw_desc, "html.parser")
@@ -83,10 +83,6 @@ class RemoteFeedJobAdapter(JobScraperAdapter):
                         raw_hash=raw_hash,
                         payload=item,
                     )
-
-                    if storage.is_content_seen(raw_hash):
-                        continue
-
                     storage.record_content_hash(raw_hash, job_id)
 
                     posting = JobPosting(
@@ -99,6 +95,7 @@ class RemoteFeedJobAdapter(JobScraperAdapter):
                         source=self.source_name,
                         posted_at=pub_date,
                         raw_hash=raw_hash,
+                        salary_range=sal_range,
                     )
                     postings.append(posting)
 
