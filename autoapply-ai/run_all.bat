@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 echo ========================================================
-echo   AutoApply AI — One-Click Development Launch
+echo   AutoApply AI -- One-Click Development Launch
 echo ========================================================
 
 echo 1. Launching Backend (FastAPI on http://127.0.0.1:8000)...
